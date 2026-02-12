@@ -52,6 +52,15 @@ async function main() {
 
     // 2. Create Roles
     console.log('👥 Creating roles...');
+    const superAdminRole = await prisma.role.create({
+        data: {
+            name: 'Super Admin',
+            permissions: {
+                connect: permissions.map(p => ({ id: p.id }))
+            }
+        }
+    });
+
     const adminRole = await prisma.role.create({
         data: {
             name: 'Admin',
@@ -182,6 +191,16 @@ async function main() {
     // 6. Create Users
     console.log('👤 Creating users...');
     const hashedPassword = await bcrypt.hash('password123', 10);
+
+    const superAdmin = await prisma.user.create({
+        data: {
+            name: 'Product Owner',
+            email: 'owner@saifrms.com',
+            password: hashedPassword,
+            roleId: superAdminRole.id,
+            // No restaurantId for Super Admin
+        }
+    });
 
     const adminUser = await prisma.user.create({
         data: {
@@ -1125,6 +1144,7 @@ async function main() {
     console.log('   - 2 Promo Banners');
     console.log('   - Reviews, Reservations, Loyalty Transactions, and more!');
     console.log('\n🔐 Login Credentials:');
+    console.log('   Super Admin: owner@saifrms.com / password123');
     console.log('   Admin: admin@saifskitchen.com / password123');
     console.log('   Manager: manager@saifskitchen.com / password123');
     console.log('   Cashier: cashier1@saifskitchen.com / password123');
