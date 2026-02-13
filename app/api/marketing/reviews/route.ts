@@ -2,17 +2,28 @@ import prisma from '@/lib/prisma'
 import { successResponse, errorResponse } from '@/lib/api-response'
 import { NextRequest } from 'next/server'
 import { reviewSchema } from '@/lib/validations/marketing'
+import { withAuth } from '@/lib/with-auth'
 
-export async function GET(req: NextRequest) {
+export const GET = withAuth(async (req: NextRequest, { auth }) => {
     try {
         const { searchParams } = new URL(req.url)
         const orderId = searchParams.get('orderId')
         const menuItemId = searchParams.get('menuItemId')
 
+        let restaurantId = auth.restaurantId;
+        if (auth.role === 'Super Admin') {
+            const queryRestId = searchParams.get('restaurantId')
+            if (queryRestId) restaurantId = queryRestId;
+            else restaurantId = undefined;
+        }
+
         const reviews = await prisma.review.findMany({
             where: {
-                ...(orderId && { orderId }),
-                ...(menuItemId && { menuItemId }),
+                AND: [
+                    orderId ? { orderId } : {},
+                    menuItemId ? { menuItemId } : {},
+                    restaurantId ? { order: { branch: { restaurantId } } } : {}
+                ]
             },
             include: {
                 order: { include: { customer: true } },
@@ -24,15 +35,29 @@ export async function GET(req: NextRequest) {
     } catch (error: any) {
         return errorResponse('Failed to fetch reviews', error.message, 500)
     }
-}
+})
 
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (req: NextRequest, { auth }) => {
     try {
         const body = await req.json()
         const validation = reviewSchema.safeParse(body)
         if (!validation.success) {
             return errorResponse('Validation failed', validation.error.flatten().fieldErrors, 400)
         }
+
+        const { orderId } = validation.data
+
+        // Security check: Verify order belongs to restaurant
+        if (auth.role !== 'Super Admin' && auth.restaurantId) {
+            const order = await prisma.order.findUnique({
+                where: { id: orderId },
+                select: { branch: { select: { restaurantId: true } } }
+            })
+            if (!order || order.branch.restaurantId !== auth.restaurantId) {
+                return errorResponse('Unauthorized order for this review', null, 403)
+            }
+        }
+
         const review = await prisma.review.create({
             data: validation.data,
             include: { order: true, menuItem: true }
@@ -42,4 +67,4 @@ export async function POST(req: NextRequest) {
         if (error.code === 'P2002') return errorResponse('Review for this order already exists')
         return errorResponse('Failed to create review', error.message, 500)
     }
-}
+})

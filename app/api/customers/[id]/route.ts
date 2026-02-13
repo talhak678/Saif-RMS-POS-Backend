@@ -2,15 +2,18 @@ import prisma from '@/lib/prisma'
 import { successResponse, errorResponse } from '@/lib/api-response'
 import { NextRequest } from 'next/server'
 import { customerSchema } from '@/lib/validations/customer'
+import { withAuth } from '@/lib/with-auth'
 
-export async function GET(
-    req: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = withAuth(async (req, { params, auth }) => {
     try {
         const { id } = await params
-        const customer = await prisma.customer.findUnique({
-            where: { id },
+        const restaurantId = auth.restaurantId;
+
+        const customer = await prisma.customer.findFirst({
+            where: {
+                id,
+                ...(auth.role !== 'Super Admin' && restaurantId ? { restaurantId } : {})
+            },
             include: {
                 orders: {
                     include: {
@@ -27,14 +30,21 @@ export async function GET(
     } catch (error: any) {
         return errorResponse('Failed to fetch customer', error.message, 500)
     }
-}
+})
 
-export async function PUT(
-    req: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const PUT = withAuth(async (req, { params, auth }) => {
     try {
         const { id } = await params
+        const restaurantId = auth.restaurantId;
+
+        const existing = await prisma.customer.findFirst({
+            where: {
+                id,
+                ...(auth.role !== 'Super Admin' && restaurantId ? { restaurantId } : {})
+            }
+        })
+        if (!existing) return errorResponse('Customer not found or unauthorized', null, 404)
+
         const body = await req.json()
         const validation = customerSchema.safeParse(body)
 
@@ -51,21 +61,27 @@ export async function PUT(
 
         return successResponse(customer, 'Customer updated successfully')
     } catch (error: any) {
-        if (error.code === 'P2025') return errorResponse('Customer not found', null, 404)
+        if (error.code === 'P2002') return errorResponse('Customer email already exists')
         return errorResponse('Failed to update customer', error.message, 500)
     }
-}
+})
 
-export async function DELETE(
-    req: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAuth(async (req, { params, auth }) => {
     try {
         const { id } = await params
+        const restaurantId = auth.restaurantId;
+
+        const existing = await prisma.customer.findFirst({
+            where: {
+                id,
+                ...(auth.role !== 'Super Admin' && restaurantId ? { restaurantId } : {})
+            }
+        })
+        if (!existing) return errorResponse('Customer not found or unauthorized', null, 404)
+
         await prisma.customer.delete({ where: { id } })
         return successResponse(null, 'Customer deleted successfully')
     } catch (error: any) {
-        if (error.code === 'P2025') return errorResponse('Customer not found', null, 404)
         return errorResponse('Failed to delete customer', error.message, 500)
     }
-}
+}, { roles: ['Super Admin', 'Admin', 'Manager'] })

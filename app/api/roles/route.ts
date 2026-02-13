@@ -2,8 +2,9 @@ import prisma from '@/lib/prisma'
 import { successResponse, errorResponse } from '@/lib/api-response'
 import { NextRequest } from 'next/server'
 import { roleSchema } from '@/lib/validations/role'
+import { withAuth } from '@/lib/with-auth'
 
-export async function GET() {
+export const GET = withAuth(async () => {
     try {
         const roles = await prisma.role.findMany({
             include: {
@@ -16,9 +17,9 @@ export async function GET() {
     } catch (error: any) {
         return errorResponse('Failed to fetch roles', error.message, 500)
     }
-}
+})
 
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (req: NextRequest) => {
     try {
         const body = await req.json()
         const validation = roleSchema.safeParse(body)
@@ -44,4 +45,4 @@ export async function POST(req: NextRequest) {
         if (error.code === 'P2002') return errorResponse('Role name already exists')
         return errorResponse('Failed to create role', error.message, 500)
     }
-}
+}, { roles: ['Super Admin'] }) // Only super admins manage system-wide roles

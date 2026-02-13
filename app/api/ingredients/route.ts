@@ -2,10 +2,21 @@ import prisma from '@/lib/prisma'
 import { successResponse, errorResponse } from '@/lib/api-response'
 import { NextRequest } from 'next/server'
 import { ingredientSchema } from '@/lib/validations/inventory'
+import { withAuth } from '@/lib/with-auth'
 
-export async function GET() {
+export const GET = withAuth(async (req: NextRequest, { auth }) => {
     try {
+        const { searchParams } = new URL(req.url)
+        let restaurantId = auth.restaurantId;
+
+        if (auth.role === 'Super Admin') {
+            const queryRestId = searchParams.get('restaurantId')
+            if (queryRestId) restaurantId = queryRestId;
+            else restaurantId = undefined;
+        }
+
         const ingredients = await prisma.ingredient.findMany({
+            where: restaurantId ? { restaurantId } : {},
             include: {
                 _count: { select: { stocks: true, recipes: true } }
             }
@@ -14,13 +25,18 @@ export async function GET() {
     } catch (error: any) {
         return errorResponse('Failed to fetch ingredients', error.message, 500)
     }
-}
+})
 
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (req: NextRequest, { auth }) => {
     try {
         const body = await req.json()
-        const validation = ingredientSchema.safeParse(body)
 
+        // Inject restaurantId
+        if (auth.role !== 'Super Admin' || !body.restaurantId) {
+            body.restaurantId = auth.restaurantId;
+        }
+
+        const validation = ingredientSchema.safeParse(body)
         if (!validation.success) {
             return errorResponse('Validation failed', validation.error.flatten().fieldErrors, 400)
         }
@@ -33,4 +49,4 @@ export async function POST(req: NextRequest) {
     } catch (error: any) {
         return errorResponse('Failed to create ingredient', error.message, 500)
     }
-}
+})

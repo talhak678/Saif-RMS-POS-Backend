@@ -3,11 +3,18 @@ import { successResponse, errorResponse } from '@/lib/api-response'
 import { NextRequest } from 'next/server'
 import { hashPassword } from '@/lib/auth-utils'
 import { userCreateSchema } from '@/lib/validations/user'
+import { withAuth } from '@/lib/with-auth'
 
-export async function GET(req: NextRequest) {
+export const GET = withAuth(async (req: NextRequest, { auth }) => {
     try {
         const { searchParams } = new URL(req.url)
-        const restaurantId = searchParams.get('restaurantId')
+        let restaurantId = auth.restaurantId;
+
+        if (auth.role === 'Super Admin') {
+            const queryRestId = searchParams.get('restaurantId')
+            if (queryRestId) restaurantId = queryRestId;
+            else restaurantId = undefined;
+        }
 
         const users = await prisma.user.findMany({
             where: restaurantId ? { restaurantId } : {},
@@ -27,11 +34,17 @@ export async function GET(req: NextRequest) {
     } catch (error: any) {
         return errorResponse('Failed to fetch users', error.message, 500)
     }
-}
+})
 
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (req: NextRequest, { auth }) => {
     try {
         const body = await req.json()
+
+        // Inject restaurantId
+        if (auth.role !== 'Super Admin' || !body.restaurantId) {
+            body.restaurantId = auth.restaurantId;
+        }
+
         const validation = userCreateSchema.safeParse(body)
 
         if (!validation.success) {
@@ -61,4 +74,4 @@ export async function POST(req: NextRequest) {
         if (error.code === 'P2002') return errorResponse('Email already exists')
         return errorResponse('Failed to create user', error.message, 500)
     }
-}
+}, { roles: ['Super Admin', 'Admin'] }) // Only Admins can manage users

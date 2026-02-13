@@ -41,8 +41,8 @@ model User {
   role         Role        @relation(fields: [roleId], references: [id])
   restaurantId String?     @map("restaurant_id")
   restaurant   Restaurant? @relation(fields: [restaurantId], references: [id])
-  createdAt     DateTime    @default(now()) @map("created_at")
-  updatedAt     DateTime    @updatedAt @map("updated_at")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
 
   @@map("users")
 }
@@ -52,30 +52,35 @@ model User {
 // ---------------------------------------------------------
 
 model Restaurant {
-  id           String      @id @default(cuid())
+  id           String     @id @default(cuid())
   name         String
-  slug         String      @unique
+  slug         String     @unique
   logo         String?
   description  String?
-  status       RestStatus  @default(PENDING)
-  subscription SubType     @default(FREE)
-  
+  status       RestStatus @default(PENDING)
+  subscription SubType    @default(FREE)
+
   // Social Media & Marketing
-  facebookUrl   String?    @map("facebook_url")
-  instagramUrl  String?    @map("instagram_url")
-  tiktokUrl     String?    @map("tiktok_url")
-  metaPixelId   String?    @map("meta_pixel_id")
-  
-  branches     Branch[]
-  settings     Setting[]
-  users        User[]
-  categories   Category[]
-  faqItems     FaqItem[]
-  cmsPages     CmsPage[]
-  promos       PromoBanner[]
-  
-  createdAt    DateTime    @default(now()) @map("created_at")
-  updatedAt    DateTime    @updatedAt @map("updated_at")
+  facebookUrl  String? @map("facebook_url")
+  instagramUrl String? @map("instagram_url")
+  tiktokUrl    String? @map("tiktok_url")
+  metaPixelId  String? @map("meta_pixel_id")
+
+  branches      Branch[]
+  settings      Setting[]
+  users         User[]
+  categories    Category[]
+  menuItems     MenuItem[]
+  ingredients   Ingredient[]
+  customers     Customer[]
+  discountCodes DiscountCode[]
+  riders        Rider[]
+  faqItems      FaqItem[]
+  cmsPages      CmsPage[]
+  promos        PromoBanner[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("restaurants")
 }
@@ -84,7 +89,6 @@ enum RestStatus {
   PENDING
   ACTIVE
   SUSPENDED
-  
 }
 
 enum SubType {
@@ -95,32 +99,32 @@ enum SubType {
 }
 
 model Branch {
-  id           String     @id @default(cuid())
-  name         String
-  address      String
-  phone        String?
-  
-  // Delivery Logic
-  deliveryRadius Float?   @map("delivery_radius") // in KM
-  freeDeliveryThreshold Decimal? @db.Decimal(10, 2) @map("free_delivery_threshold")
-  deliveryCharge Decimal? @db.Decimal(10, 2) @map("delivery_charge")
-  deliveryOffTime String? @map("delivery_off_time") // e.g., "22:00"
+  id      String  @id @default(cuid())
+  name    String
+  address String
+  phone   String?
 
-  restaurantId String     @map("restaurant_id")
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  // Delivery Logic
+  deliveryRadius        Float?   @map("delivery_radius") // in KM
+  freeDeliveryThreshold Decimal? @map("free_delivery_threshold") @db.Decimal(10, 2)
+  deliveryCharge        Decimal? @map("delivery_charge") @db.Decimal(10, 2)
+  deliveryOffTime       String?  @map("delivery_off_time") // e.g., "22:00"
+
+  restaurantId String        @map("restaurant_id")
+  restaurant   Restaurant    @relation(fields: [restaurantId], references: [id])
   orders       Order[]
   stocks       Stock[]
   reservations Reservation[]
-  
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("branches")
 }
 
 model Setting {
   id           String     @id @default(cuid())
-  key          String     // e.g., "currency", "timezone", "theme_mode" (light/dark)
+  key          String // e.g., "currency", "timezone", "theme_mode" (light/dark)
   value        String
   restaurantId String     @map("restaurant_id")
   restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
@@ -134,41 +138,43 @@ model Setting {
 // ---------------------------------------------------------
 
 model Category {
-  id           String      @id @default(cuid())
+  id           String     @id @default(cuid())
   name         String
   description  String?
-  restaurantId String      @map("restaurant_id")
-  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id])
+  restaurantId String     @map("restaurant_id")
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
   menuItems    MenuItem[]
-  createdAt    DateTime    @default(now()) @map("created_at")
-  updatedAt    DateTime    @updatedAt @map("updated_at")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
 
   @@map("categories")
 }
 
 model MenuItem {
-  id          String      @id @default(cuid())
-  name        String
-  description String?
-  price       Decimal     @db.Decimal(10, 2)
-  image       String?
-  isAvailable Boolean     @default(true)
-  categoryId  String      @map("category_id")
-  category    Category    @relation(fields: [categoryId], references: [id])
-  variations  Variation[]
-  addons      Addon[]
-  recipes     Recipe[]
-  orderItems  OrderItem[]
-  reviews     Review[]
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+  id           String      @id @default(cuid())
+  name         String
+  description  String?
+  price        Decimal     @db.Decimal(10, 2)
+  image        String?
+  isAvailable  Boolean     @default(true)
+  categoryId   String      @map("category_id")
+  category     Category    @relation(fields: [categoryId], references: [id])
+  restaurantId String?     @map("restaurant_id")
+  restaurant   Restaurant? @relation(fields: [restaurantId], references: [id])
+  variations   Variation[]
+  addons       Addon[]
+  recipes      Recipe[]
+  orderItems   OrderItem[]
+  reviews      Review[]
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
 
   @@map("menu_items")
 }
 
 model Variation {
   id         String   @id @default(cuid())
-  name       String   // e.g., Small, Medium, Large
+  name       String // e.g., Small, Medium, Large
   price      Decimal  @db.Decimal(10, 2)
   menuItemId String   @map("menu_item_id")
   menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
@@ -178,7 +184,7 @@ model Variation {
 
 model Addon {
   id         String   @id @default(cuid())
-  name       String   // e.g., Extra Cheese
+  name       String // e.g., Extra Cheese
   price      Decimal  @db.Decimal(10, 2)
   menuItemId String   @map("menu_item_id")
   menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
@@ -191,13 +197,15 @@ model Addon {
 // ---------------------------------------------------------
 
 model Ingredient {
-  id        String   @id @default(cuid())
-  name      String
-  unit      String   // e.g., kg, grams, pcs
-  recipes   Recipe[]
-  stocks    Stock[]
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id           String      @id @default(cuid())
+  name         String
+  unit         String // e.g., kg, grams, pcs
+  restaurantId String?     @map("restaurant_id")
+  restaurant   Restaurant? @relation(fields: [restaurantId], references: [id])
+  recipes      Recipe[]
+  stocks       Stock[]
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
 
   @@map("ingredients")
 }
@@ -231,20 +239,20 @@ model Stock {
 // ---------------------------------------------------------
 
 model Order {
-  id           String      @id @default(cuid())
-  orderNo      Int         @default(autoincrement()) @map("order_no")
-  status       OrderStatus @default(PENDING)
-  type         OrderType
-  total        Decimal     @db.Decimal(10, 2)
-  branchId     String      @map("branch_id")
-  branch       Branch      @relation(fields: [branchId], references: [id])
-  payment      Payment?
-  items        OrderItem[]
-  customerId   String?     @map("customer_id")
-  customer     Customer?   @relation(fields: [customerId], references: [id])
-  review       Review?
-  createdAt    DateTime    @default(now()) @map("created_at")
-  updatedAt    DateTime    @updatedAt @map("updated_at")
+  id         String      @id @default(cuid())
+  orderNo    Int         @default(autoincrement()) @map("order_no")
+  status     OrderStatus @default(PENDING)
+  type       OrderType
+  total      Decimal     @db.Decimal(10, 2)
+  branchId   String      @map("branch_id")
+  branch     Branch      @relation(fields: [branchId], references: [id])
+  payment    Payment?
+  items      OrderItem[]
+  customerId String?     @map("customer_id")
+  customer   Customer?   @relation(fields: [customerId], references: [id])
+  review     Review?
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
 
   @@map("orders")
 }
@@ -313,15 +321,17 @@ enum PaymentStatus {
 // ---------------------------------------------------------
 
 model Customer {
-  id            String         @id @default(cuid())
+  id            String       @id @default(cuid())
   name          String
-  email         String?        @unique
+  email         String?      @unique
   phone         String?
+  restaurantId  String?      @map("restaurant_id")
+  restaurant    Restaurant?  @relation(fields: [restaurantId], references: [id])
   orders        Order[]
-  loyaltyPoints Int            @default(0) @map("loyalty_points")
+  loyaltyPoints Int          @default(0) @map("loyalty_points")
   loyaltyTrxs   LoyaltyTrx[]
-  createdAt     DateTime       @default(now()) @map("created_at")
-  updatedAt     DateTime       @updatedAt @map("updated_at")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
 
   @@map("customers")
 }
@@ -329,7 +339,7 @@ model Customer {
 model LoyaltyTrx {
   id         String   @id @default(cuid())
   points     Int
-  type       String   // EARNED, REDEEMED
+  type       String // EARNED, REDEEMED
   customerId String   @map("customer_id")
   customer   Customer @relation(fields: [customerId], references: [id])
   createdAt  DateTime @default(now()) @map("created_at")
@@ -338,13 +348,15 @@ model LoyaltyTrx {
 }
 
 model DiscountCode {
-  id         String   @id @default(cuid())
-  code       String   @unique
-  percentage Float?
-  amount     Float?
-  isActive   Boolean  @default(true) @map("is_active")
-  createdAt  DateTime @default(now()) @map("created_at")
-  expiresAt  DateTime? @map("expires_at")
+  id           String      @id @default(cuid())
+  code         String      @unique
+  percentage   Float?
+  amount       Float?
+  isActive     Boolean     @default(true) @map("is_active")
+  restaurantId String?     @map("restaurant_id")
+  restaurant   Restaurant? @relation(fields: [restaurantId], references: [id])
+  createdAt    DateTime    @default(now()) @map("created_at")
+  expiresAt    DateTime?   @map("expires_at")
 
   @@map("discount_codes")
 }
@@ -354,12 +366,14 @@ model DiscountCode {
 // ---------------------------------------------------------
 
 model Rider {
-  id        String   @id @default(cuid())
-  name      String
-  phone     String?
-  status    RiderStatus @default(AVAILABLE)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id           String      @id @default(cuid())
+  name         String
+  phone        String?
+  status       RiderStatus @default(AVAILABLE)
+  restaurantId String?     @map("restaurant_id")
+  restaurant   Restaurant? @relation(fields: [restaurantId], references: [id])
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
 
   @@map("riders")
 }
@@ -419,29 +433,29 @@ model PromoBanner {
 }
 
 model Review {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   rating     Int
   comment    String?
-  aiEnhanced Boolean  @default(false) @map("ai_enhanced") // For AI generated summaries
-  orderId    String   @unique @map("order_id")
-  order      Order    @relation(fields: [orderId], references: [id])
-  menuItemId String?  @map("menu_item_id")
+  aiEnhanced Boolean   @default(false) @map("ai_enhanced") // For AI generated summaries
+  orderId    String    @unique @map("order_id")
+  order      Order     @relation(fields: [orderId], references: [id])
+  menuItemId String?   @map("menu_item_id")
   menuItem   MenuItem? @relation(fields: [menuItemId], references: [id])
-  createdAt  DateTime @default(now()) @map("created_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
 
   @@map("reviews")
 }
 
 model Reservation {
-  id           String      @id @default(cuid())
-  customerName String      @map("customer_name")
+  id           String    @id @default(cuid())
+  customerName String    @map("customer_name")
   phone        String
-  guestCount   Int         @map("guest_count")
-  startTime    DateTime    @map("start_time")
-  status       ResStatus   @default(BOOKED)
-  branchId     String      @map("branch_id")
-  branch       Branch      @relation(fields: [branchId], references: [id])
-  createdAt    DateTime    @default(now()) @map("created_at")
+  guestCount   Int       @map("guest_count")
+  startTime    DateTime  @map("start_time")
+  status       ResStatus @default(BOOKED)
+  branchId     String    @map("branch_id")
+  branch       Branch    @relation(fields: [branchId], references: [id])
+  createdAt    DateTime  @default(now()) @map("created_at")
 
   @@map("reservations")
 }

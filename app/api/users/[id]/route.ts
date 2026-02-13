@@ -3,15 +3,18 @@ import { successResponse, errorResponse } from '@/lib/api-response'
 import { NextRequest } from 'next/server'
 import { hashPassword } from '@/lib/auth-utils'
 import { userUpdateSchema } from '@/lib/validations/user'
+import { withAuth } from '@/lib/with-auth'
 
-export async function GET(
-    req: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = withAuth(async (req, { params, auth }) => {
     try {
         const { id } = await params
-        const user = await prisma.user.findUnique({
-            where: { id },
+        const restaurantId = auth.restaurantId;
+
+        const user = await prisma.user.findFirst({
+            where: {
+                id,
+                ...(auth.role !== 'Super Admin' && restaurantId ? { restaurantId } : {})
+            },
             include: {
                 role: {
                     include: { permissions: true }
@@ -27,14 +30,21 @@ export async function GET(
     } catch (error: any) {
         return errorResponse('Failed to fetch user', error.message, 500)
     }
-}
+})
 
-export async function PUT(
-    req: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const PUT = withAuth(async (req, { params, auth }) => {
     try {
         const { id } = await params
+        const restaurantId = auth.restaurantId;
+
+        const existing = await prisma.user.findFirst({
+            where: {
+                id,
+                ...(auth.role !== 'Super Admin' && restaurantId ? { restaurantId } : {})
+            }
+        })
+        if (!existing) return errorResponse('User not found or unauthorized', null, 404)
+
         const body = await req.json()
         const validation = userUpdateSchema.safeParse(body)
 
@@ -42,8 +52,14 @@ export async function PUT(
             return errorResponse('Validation failed', validation.error.flatten().fieldErrors, 400)
         }
 
-        const { name, email, password, roleId, restaurantId } = validation.data
-        const data: any = { name, email, roleId, restaurantId }
+        const { name, email, password, roleId, restaurantId: bodyRestId } = validation.data
+        const data: any = { name, email, roleId }
+
+        if (auth.role === 'Super Admin') {
+            data.restaurantId = bodyRestId;
+        } else {
+            data.restaurantId = restaurantId;
+        }
 
         if (password) {
             data.password = await hashPassword(password)
@@ -61,22 +77,27 @@ export async function PUT(
         const { password: _, ...sanitizedUser } = user
         return successResponse(sanitizedUser, 'User updated successfully')
     } catch (error: any) {
-        if (error.code === 'P2025') return errorResponse('User not found', null, 404)
         if (error.code === 'P2002') return errorResponse('Email already exists')
         return errorResponse('Failed to update user', error.message, 500)
     }
-}
+}, { roles: ['Super Admin', 'Admin'] })
 
-export async function DELETE(
-    req: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAuth(async (req, { params, auth }) => {
     try {
         const { id } = await params
+        const restaurantId = auth.restaurantId;
+
+        const existing = await prisma.user.findFirst({
+            where: {
+                id,
+                ...(auth.role !== 'Super Admin' && restaurantId ? { restaurantId } : {})
+            }
+        })
+        if (!existing) return errorResponse('User not found or unauthorized', null, 404)
+
         await prisma.user.delete({ where: { id } })
         return successResponse(null, 'User deleted successfully')
     } catch (error: any) {
-        if (error.code === 'P2025') return errorResponse('User not found', null, 404)
         return errorResponse('Failed to delete user', error.message, 500)
     }
-}
+}, { roles: ['Super Admin', 'Admin'] })

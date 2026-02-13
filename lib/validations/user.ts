@@ -15,3 +15,7 @@ export const userUpdateSchema = z.object({
     roleId: z.string().min(1, 'Role is required').optional(),
     restaurantId: z.string().optional().nullable(),
 })
+export const userLoginSchema = z.object({
+    email: z.string().email('Invalid email address'),
+    password: z.string().min(1, 'Password is required'),
+})

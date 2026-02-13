@@ -2,15 +2,18 @@ import prisma from '@/lib/prisma'
 import { successResponse, errorResponse } from '@/lib/api-response'
 import { NextRequest } from 'next/server'
 import { orderUpdateSchema } from '@/lib/validations/order'
+import { withAuth } from '@/lib/with-auth'
 
-export async function GET(
-    req: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = withAuth(async (req, { params, auth }) => {
     try {
         const { id } = await params
-        const order = await prisma.order.findUnique({
-            where: { id },
+        const restaurantId = auth.restaurantId;
+
+        const order = await prisma.order.findFirst({
+            where: {
+                id,
+                ...(auth.role !== 'Super Admin' && restaurantId ? { branch: { restaurantId } } : {})
+            },
             include: {
                 items: { include: { menuItem: true } },
                 payment: true,
@@ -24,14 +27,21 @@ export async function GET(
     } catch (error: any) {
         return errorResponse('Failed to fetch order', error.message, 500)
     }
-}
+})
 
-export async function PUT(
-    req: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const PUT = withAuth(async (req, { params, auth }) => {
     try {
         const { id } = await params
+        const restaurantId = auth.restaurantId;
+
+        const existing = await prisma.order.findFirst({
+            where: {
+                id,
+                ...(auth.role !== 'Super Admin' && restaurantId ? { branch: { restaurantId } } : {})
+            }
+        })
+        if (!existing) return errorResponse('Order not found or unauthorized', null, 404)
+
         const body = await req.json()
         const validation = orderUpdateSchema.safeParse(body)
 
@@ -60,7 +70,6 @@ export async function PUT(
 
         return successResponse(order, 'Order updated successfully')
     } catch (error: any) {
-        if (error.code === 'P2025') return errorResponse('Order not found', null, 404)
         return errorResponse('Failed to update order', error.message, 500)
     }
-}
+})

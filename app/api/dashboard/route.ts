@@ -1,13 +1,21 @@
 import prisma from '@/lib/prisma'
 import { successResponse, errorResponse } from '@/lib/api-response'
 import { NextRequest } from 'next/server'
-import { OrderStatus, PaymentStatus } from '@prisma/client'
+import { PaymentStatus } from '@prisma/client'
+import { withAuth } from '@/lib/with-auth'
 
-export async function GET(req: NextRequest) {
+export const GET = withAuth(async (req: NextRequest, { auth }) => {
     try {
         const { searchParams } = new URL(req.url)
-        const restaurantId = searchParams.get('restaurantId')
         const branchId = searchParams.get('branchId')
+
+        // Multi-tenancy logic
+        let restaurantId = auth.restaurantId;
+        if (auth.role === 'Super Admin') {
+            const queryRestId = searchParams.get('restaurantId')
+            if (queryRestId) restaurantId = queryRestId;
+            else restaurantId = undefined;
+        }
 
         // Basic date filtering (last 30 days by default)
         const thirtyDaysAgo = new Date()
@@ -19,7 +27,7 @@ export async function GET(req: NextRequest) {
             ...(restaurantId ? { branch: { restaurantId } } : {}),
         }
 
-        // 1. Total Revenue (from completed/paid orders)
+        // 1. Total Revenue
         const revenueData = await prisma.order.aggregate({
             where: {
                 ...baseWhere,
@@ -40,7 +48,7 @@ export async function GET(req: NextRequest) {
             _count: { id: true },
         })
 
-        // 4. Top Selling Items (Basic)
+        // 4. Top Selling Items
         const topItems = await prisma.orderItem.groupBy({
             by: ['menuItemId'],
             where: {
@@ -53,7 +61,6 @@ export async function GET(req: NextRequest) {
             take: 5,
         })
 
-        // Fetch names for top items
         const topItemsWithNames = await Promise.all(
             topItems.map(async (item) => {
                 const menuItem = await prisma.menuItem.findUnique({
@@ -67,10 +74,11 @@ export async function GET(req: NextRequest) {
             })
         )
 
-        // 5. New Customers in this period
+        // 5. New Customers (Filtered by restaurant)
         const newCustomers = await prisma.customer.count({
             where: {
                 createdAt: { gte: thirtyDaysAgo },
+                ...(restaurantId ? { restaurantId } : {})
             },
         })
 
@@ -87,7 +95,6 @@ export async function GET(req: NextRequest) {
 
         return successResponse(dashboardData)
     } catch (error: any) {
-        console.error('Dashboard Error:', error)
         return errorResponse('Failed to fetch dashboard data', error.message, 500)
     }
-}
+})
