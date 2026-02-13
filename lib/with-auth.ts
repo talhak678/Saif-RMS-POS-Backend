@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getAuthContext, AuthPayload } from "./auth";
 import { errorResponse } from "./api-response";
 
@@ -13,8 +13,10 @@ type AuthenticatedHandler = (
 ) => Promise<Response>;
 
 export function withAuth(handler: AuthenticatedHandler, options: { roles?: string[] } = {}) {
-    return async (req: NextRequest, props: { params: Promise<any> }) => {
+    return async (req: NextRequest, props: any) => {
         try {
+            // Wait for params if they exist (Next.js 15+ standard)
+            const params = props?.params ? await props.params : {};
             const auth = await getAuthContext();
 
             if (!auth) {
@@ -25,7 +27,7 @@ export function withAuth(handler: AuthenticatedHandler, options: { roles?: strin
                 return errorResponse("Permission denied", null, 403);
             }
 
-            return handler(req, { params: props.params, auth });
+            return handler(req, { params: Promise.resolve(params), auth });
         } catch (error: any) {
             console.error("Auth Middleware Error:", error);
             return errorResponse("Server error during authentication", error.message, 500);
