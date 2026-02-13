@@ -27,7 +27,8 @@ export function withAuth(handler: AuthenticatedHandler, options: { roles?: strin
                 return errorResponse("Permission denied", null, 403);
             }
 
-            return handler(req, { params: Promise.resolve(params), auth });
+            // Correctly pass Promise.resolve(params) to satisfy the Context type
+            return await handler(req, { params: Promise.resolve(params), auth });
         } catch (error: any) {
             console.error("Auth Middleware Error:", error);
             return errorResponse("Server error during authentication", error.message, 500);
