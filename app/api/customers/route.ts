@@ -16,7 +16,9 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
         }
 
         const customers = await prisma.customer.findMany({
-            where: restaurantId ? { restaurantId } : {},
+            where: {
+                ...(restaurantId ? { restaurantId } : {})
+            },
             include: {
                 _count: { select: { orders: true } }
             },

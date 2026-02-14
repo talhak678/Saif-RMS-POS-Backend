@@ -5,4 +5,5 @@ export const customerSchema = z.object({
     email: z.string().email('Invalid email address').optional().nullable(),
     phone: z.string().min(10, 'Phone number must be at least 10 characters').optional().nullable(),
     loyaltyPoints: z.number().int().nonnegative().optional(),
+    restaurantId: z.string().cuid('Invalid restaurant ID').optional(),
 })
