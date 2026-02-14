@@ -1,22 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  async headers() {
-    return [
-      {
-        // matching all API routes
-        // Allow CORS for all domains (*)
-        // Note: Credentials (cookies) are NOT supported with wildcard origin.
-        // Frontend must use Authorization header with Bearer token.
-        source: "/api/:path*",
-        headers: [
-          { key: "Access-Control-Allow-Origin", value: "*" },
-          { key: "Access-Control-Allow-Methods", value: "GET,OPTIONS,PATCH,DELETE,POST,PUT" },
-          { key: "Access-Control-Allow-Headers", value: "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization" },
-        ]
-      }
-    ]
-  }
+  // Static headers removed to avoid conflicts with Middleware.
+  // Middleware now handles CORS dynamically.
 };
 
 export default nextConfig;
