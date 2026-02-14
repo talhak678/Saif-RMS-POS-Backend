@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
         })
 
         const { password: _, ...sanitizedUser } = user
-        return successResponse(sanitizedUser, 'Login successful')
+        return successResponse({ ...sanitizedUser, token }, 'Login successful')
     } catch (error: any) {
         return errorResponse('Login failed', error.message, 500)
     }

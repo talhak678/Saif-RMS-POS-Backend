@@ -17,7 +17,7 @@ export function withAuth(handler: AuthenticatedHandler, options: { roles?: strin
         try {
             // Wait for params if they exist (Next.js 15+ standard)
             const params = props?.params ? await props.params : {};
-            const auth = await getAuthContext();
+            const auth = await getAuthContext(req);
 
             if (!auth) {
                 return errorResponse("Authentication required", null, 401);

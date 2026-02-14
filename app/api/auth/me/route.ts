@@ -1,10 +1,11 @@
 import prisma from '@/lib/prisma'
 import { successResponse, errorResponse } from '@/lib/api-response'
 import { getAuthContext } from '@/lib/auth'
+import { NextRequest } from 'next/server'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
     try {
-        const payload = await getAuthContext()
+        const payload = await getAuthContext(req)
 
         if (!payload) {
             return errorResponse('Not authenticated', null, 401)

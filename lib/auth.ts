@@ -43,9 +43,16 @@ export async function setAuthCookie(payload: AuthPayload) {
     });
 }
 
-export async function getAuthContext() {
+export async function getAuthContext(req?: NextRequest) {
     const cookieStore = await cookies();
-    const token = cookieStore.get("auth_token")?.value;
+    let token = cookieStore.get("auth_token")?.value;
+
+    if (!token && req) {
+        const authHeader = req.headers.get("Authorization") || req.headers.get("authorization");
+        if (authHeader?.startsWith("Bearer ")) {
+            token = authHeader.substring(7);
+        }
+    }
 
     if (!token) return null;
 
