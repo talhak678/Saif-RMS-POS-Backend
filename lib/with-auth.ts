@@ -30,7 +30,7 @@ export function withAuth(handler: AuthenticatedHandler, options: { roles?: strin
             // Correctly pass Promise.resolve(params) to satisfy the Context type
             return await handler(req, { params: Promise.resolve(params), auth });
         } catch (error: any) {
-            console.error("Auth Middleware Error:", error);
+            console.error("Auth Error:", error);
             return errorResponse("Server error during authentication", error.message, 500);
         }
     };
