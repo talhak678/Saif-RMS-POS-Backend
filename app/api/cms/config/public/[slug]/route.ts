@@ -9,6 +9,7 @@ export async function GET(
 ) {
     try {
         const { slug } = await params;
+        console.log('🔍 [PUBLIC API] Fetching restaurant with slug:', slug);
 
         const restaurant = await prisma.restaurant.findUnique({
             where: { slug },
@@ -27,7 +28,12 @@ export async function GET(
             }
         })
 
+        console.log('🏪 [PUBLIC API] Restaurant found:', restaurant ? 'YES' : 'NO');
+        console.log('🆔 [PUBLIC API] Restaurant ID:', restaurant?.id);
+        console.log('⚙️ [PUBLIC API] WebsiteConfig exists:', restaurant?.websiteConfig ? 'YES' : 'NO');
+
         if (!restaurant) {
+            console.log('❌ [PUBLIC API] Restaurant not found for slug:', slug);
             return errorResponse('Restaurant not found', null, 404)
         }
 
@@ -45,8 +51,20 @@ export async function GET(
             menu: restaurant.categories
         }
 
+        console.log('✅ [PUBLIC API] Returning data for:', restaurant.name);
+        console.log('📊 [PUBLIC API] Stats:', {
+            promos: restaurant.promos.length,
+            faqs: restaurant.faqItems.length,
+            blogs: restaurant.blogPosts.length,
+            categories: restaurant.categories.length
+        });
+
         return successResponse(data)
     } catch (error: any) {
+        console.error('💥 [PUBLIC API] Error fetching website data:', error);
+        console.error('💥 [PUBLIC API] Error name:', error.name);
+        console.error('💥 [PUBLIC API] Error message:', error.message);
+        console.error('💥 [PUBLIC API] Error stack:', error.stack);
         return errorResponse('Failed to fetch public website data', error.message, 500)
     }
 }
