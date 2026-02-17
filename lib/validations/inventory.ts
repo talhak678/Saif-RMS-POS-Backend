@@ -3,7 +3,7 @@ import { z } from 'zod'
 export const ingredientSchema = z.object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
     unit: z.string().min(1, 'Unit is required'), // e.g., kg, grams, pcs
-    restaurantId: z.string().cuid('Invalid restaurant ID').optional(),
+    restaurantId: z.string().cuid('Invalid restaurant ID'),
 })
 
 export const recipeSchema = z.object({

@@ -7,7 +7,7 @@ export const menuItemSchema = z.object({
     image: z.string().url().optional().or(z.literal('')),
     isAvailable: z.boolean().default(true),
     categoryId: z.string().cuid('Invalid category ID'),
-    restaurantId: z.string().cuid('Invalid restaurant ID').optional(),
+    restaurantId: z.string().cuid('Invalid restaurant ID'),
     variations: z.array(z.object({
         name: z.string(),
         price: z.number().min(0)
