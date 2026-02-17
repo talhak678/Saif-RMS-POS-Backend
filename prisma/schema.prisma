@@ -78,6 +78,7 @@ model Restaurant {
   faqItems      FaqItem[]
   cmsPages      CmsPage[]
   promos        PromoBanner[]
+  websiteConfig WebsiteConfig?
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -430,6 +431,25 @@ model PromoBanner {
   restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
 
   @@map("promo_banners")
+}
+
+model WebsiteConfig {
+  id           String     @id @default(cuid())
+  restaurantId String     @unique @map("restaurant_id")
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+
+  // Theme Settings
+  backgroundColor String?  @default("#ffffff") @map("background_color")
+  primaryColor    String?  @default("#ff0000") @map("primary_color")
+
+  // Page Configurations (Stored as JSON for maximum flexibility)
+  // Format based on documentation-cms.md
+  configJson Json @map("config_json")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("website_configs")
 }
 
 model Review {

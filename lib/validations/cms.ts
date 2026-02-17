@@ -20,3 +20,10 @@ export const promoBannerSchema = z.object({
     isActive: z.boolean().default(true),
     restaurantId: z.string().cuid('Invalid restaurant ID'),
 })
+
+export const websiteConfigSchema = z.object({
+    restaurantId: z.string().cuid('Invalid restaurant ID'),
+    backgroundColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color').optional(),
+    primaryColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color').optional(),
+    configJson: z.any(), // Flexible JSON structure based on documentation-cms.md
+})
