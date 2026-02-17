@@ -309,6 +309,7 @@ async function main() {
             image: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400',
             isAvailable: true,
             categoryId: categories[0].id,
+            restaurantId: restaurant.id,
             variations: {
                 create: [
                     { name: '3 Pieces', price: 120 },
@@ -326,6 +327,7 @@ async function main() {
             image: 'https://images.unsplash.com/photo-1529006557810-274b9b2fc783?w=400',
             isAvailable: true,
             categoryId: categories[0].id,
+            restaurantId: restaurant.id,
             variations: {
                 create: [
                     { name: '4 Pieces', price: 180 },
@@ -344,6 +346,7 @@ async function main() {
             image: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400',
             isAvailable: true,
             categoryId: categories[1].id,
+            restaurantId: restaurant.id,
             variations: {
                 create: [
                     { name: 'Half', price: 700 },
@@ -368,6 +371,7 @@ async function main() {
             image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=400',
             isAvailable: true,
             categoryId: categories[1].id,
+            restaurantId: restaurant.id,
             variations: {
                 create: [
                     { name: 'Half', price: 1000 },
@@ -392,6 +396,7 @@ async function main() {
             image: 'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=400',
             isAvailable: true,
             categoryId: categories[2].id,
+            restaurantId: restaurant.id,
             variations: {
                 create: [
                     { name: 'Chicken (2pc)', price: 280 },
@@ -411,6 +416,7 @@ async function main() {
             image: 'https://images.unsplash.com/photo-1603360946369-dc9bb6258143?w=400',
             isAvailable: true,
             categoryId: categories[2].id,
+            restaurantId: restaurant.id,
             addons: {
                 create: [
                     { name: 'Mint Chutney', price: 30 },
@@ -429,6 +435,7 @@ async function main() {
             image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400',
             isAvailable: true,
             categoryId: categories[3].id,
+            restaurantId: restaurant.id,
             variations: {
                 create: [
                     { name: 'Regular', price: 450 },
@@ -452,6 +459,7 @@ async function main() {
             image: 'https://images.unsplash.com/photo-1642821373181-696a54913e93?w=400',
             isAvailable: true,
             categoryId: categories[3].id,
+            restaurantId: restaurant.id,
             variations: {
                 create: [
                     { name: 'Regular', price: 600 },
@@ -470,6 +478,7 @@ async function main() {
             image: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400',
             isAvailable: true,
             categoryId: categories[4].id,
+            restaurantId: restaurant.id,
             variations: {
                 create: [
                     { name: 'Plain Naan', price: 40 },
@@ -489,6 +498,7 @@ async function main() {
             image: 'https://images.unsplash.com/photo-1617093727343-374698b1b08d?w=400',
             isAvailable: true,
             categoryId: categories[4].id,
+            restaurantId: restaurant.id,
         }
     });
 
@@ -501,6 +511,7 @@ async function main() {
             image: 'https://images.unsplash.com/photo-1623065422902-30a2d299bbe4?w=400',
             isAvailable: true,
             categoryId: categories[5].id,
+            restaurantId: restaurant.id,
             variations: {
                 create: [
                     { name: 'Regular', price: 180 },
@@ -518,6 +529,7 @@ async function main() {
             image: 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?w=400',
             isAvailable: true,
             categoryId: categories[5].id,
+            restaurantId: restaurant.id,
             variations: {
                 create: [
                     { name: 'Orange', price: 200 },
@@ -536,6 +548,7 @@ async function main() {
             image: 'https://images.unsplash.com/photo-1581098365948-6a5a912b7a49?w=400',
             isAvailable: true,
             categoryId: categories[5].id,
+            restaurantId: restaurant.id,
             variations: {
                 create: [
                     { name: 'Coca Cola', price: 80 },
@@ -555,6 +568,7 @@ async function main() {
             image: 'https://images.unsplash.com/photo-1612203986734-4f9e1d8e0d4a?w=400',
             isAvailable: true,
             categoryId: categories[6].id,
+            restaurantId: restaurant.id,
         }
     });
 
@@ -566,6 +580,7 @@ async function main() {
             image: 'https://images.unsplash.com/photo-1589638672283-303e6b31567f?w=400',
             isAvailable: true,
             categoryId: categories[6].id,
+            restaurantId: restaurant.id,
             variations: {
                 create: [
                     { name: '2 Pieces', price: 120 },
@@ -578,16 +593,16 @@ async function main() {
     // 9. Create Ingredients
     console.log('🥕 Creating ingredients...');
     const ingredients = await Promise.all([
-        prisma.ingredient.create({ data: { name: 'Chicken', unit: 'kg' } }),
-        prisma.ingredient.create({ data: { name: 'Mutton', unit: 'kg' } }),
-        prisma.ingredient.create({ data: { name: 'Rice', unit: 'kg' } }),
-        prisma.ingredient.create({ data: { name: 'Onions', unit: 'kg' } }),
-        prisma.ingredient.create({ data: { name: 'Tomatoes', unit: 'kg' } }),
-        prisma.ingredient.create({ data: { name: 'Yogurt', unit: 'liter' } }),
-        prisma.ingredient.create({ data: { name: 'Flour', unit: 'kg' } }),
-        prisma.ingredient.create({ data: { name: 'Oil', unit: 'liter' } }),
-        prisma.ingredient.create({ data: { name: 'Milk', unit: 'liter' } }),
-        prisma.ingredient.create({ data: { name: 'Mango Pulp', unit: 'kg' } }),
+        prisma.ingredient.create({ data: { name: 'Chicken', unit: 'kg', restaurantId: restaurant.id } }),
+        prisma.ingredient.create({ data: { name: 'Mutton', unit: 'kg', restaurantId: restaurant.id } }),
+        prisma.ingredient.create({ data: { name: 'Rice', unit: 'kg', restaurantId: restaurant.id } }),
+        prisma.ingredient.create({ data: { name: 'Onions', unit: 'kg', restaurantId: restaurant.id } }),
+        prisma.ingredient.create({ data: { name: 'Tomatoes', unit: 'kg', restaurantId: restaurant.id } }),
+        prisma.ingredient.create({ data: { name: 'Yogurt', unit: 'liter', restaurantId: restaurant.id } }),
+        prisma.ingredient.create({ data: { name: 'Flour', unit: 'kg', restaurantId: restaurant.id } }),
+        prisma.ingredient.create({ data: { name: 'Oil', unit: 'liter', restaurantId: restaurant.id } }),
+        prisma.ingredient.create({ data: { name: 'Milk', unit: 'liter', restaurantId: restaurant.id } }),
+        prisma.ingredient.create({ data: { name: 'Mango Pulp', unit: 'kg', restaurantId: restaurant.id } }),
     ]);
 
     // 10. Create Recipes (Ingredient Requirements)
@@ -679,7 +694,8 @@ async function main() {
                 name: 'Talha Khan',
                 email: 'talha@example.com',
                 phone: '+92 300 1111111',
-                loyaltyPoints: 150
+                loyaltyPoints: 150,
+                restaurantId: restaurant.id
             }
         }),
         prisma.customer.create({
@@ -687,7 +703,8 @@ async function main() {
                 name: 'Fatima Ahmed',
                 email: 'fatima@example.com',
                 phone: '+92 321 2222222',
-                loyaltyPoints: 280
+                loyaltyPoints: 280,
+                restaurantId: restaurant.id
             }
         }),
         prisma.customer.create({
@@ -695,7 +712,8 @@ async function main() {
                 name: 'Hamza Ali',
                 email: 'hamza@example.com',
                 phone: '+92 333 3333333',
-                loyaltyPoints: 95
+                loyaltyPoints: 95,
+                restaurantId: restaurant.id
             }
         }),
         prisma.customer.create({
@@ -703,7 +721,8 @@ async function main() {
                 name: 'Ayesha Malik',
                 email: 'ayesha@example.com',
                 phone: '+92 300 4444444',
-                loyaltyPoints: 200
+                loyaltyPoints: 200,
+                restaurantId: restaurant.id
             }
         }),
         prisma.customer.create({
@@ -711,7 +730,8 @@ async function main() {
                 name: 'Usman Tariq',
                 email: 'usman@example.com',
                 phone: '+92 321 5555555',
-                loyaltyPoints: 50
+                loyaltyPoints: 50,
+                restaurantId: restaurant.id
             }
         }),
     ]);
@@ -964,21 +984,24 @@ async function main() {
             data: {
                 name: 'Bilal Ahmed',
                 phone: '+92 300 8888888',
-                status: 'AVAILABLE'
+                status: 'AVAILABLE',
+                restaurantId: restaurant.id
             }
         }),
         prisma.rider.create({
             data: {
                 name: 'Kashif Ali',
                 phone: '+92 321 9999999',
-                status: 'BUSY'
+                status: 'BUSY',
+                restaurantId: restaurant.id
             }
         }),
         prisma.rider.create({
             data: {
                 name: 'Fahad Malik',
                 phone: '+92 333 0000000',
-                status: 'AVAILABLE'
+                status: 'AVAILABLE',
+                restaurantId: restaurant.id
             }
         }),
     ]);
@@ -994,7 +1017,8 @@ async function main() {
                 code: 'SAVE20',
                 percentage: 20,
                 isActive: true,
-                expiresAt: futureDate
+                expiresAt: futureDate,
+                restaurantId: restaurant.id
             }
         }),
         prisma.discountCode.create({
@@ -1002,7 +1026,8 @@ async function main() {
                 code: 'FLAT200',
                 amount: 200,
                 isActive: true,
-                expiresAt: futureDate
+                expiresAt: futureDate,
+                restaurantId: restaurant.id
             }
         }),
         prisma.discountCode.create({
@@ -1010,7 +1035,8 @@ async function main() {
                 code: 'FIRSTORDER',
                 percentage: 50,
                 isActive: true,
-                expiresAt: futureDate
+                expiresAt: futureDate,
+                restaurantId: restaurant.id
             }
         }),
     ]);
