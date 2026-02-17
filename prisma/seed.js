@@ -30,6 +30,7 @@ async function main() {
     await prisma.notification.deleteMany();
     await prisma.setting.deleteMany();
     await prisma.user.deleteMany();
+    await prisma.websiteConfig.deleteMany();
     await prisma.branch.deleteMany();
     await prisma.restaurant.deleteMany();
     await prisma.permission.deleteMany();
