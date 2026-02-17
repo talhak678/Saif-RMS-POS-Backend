@@ -25,6 +25,7 @@ async function main() {
     await prisma.discountCode.deleteMany();
     await prisma.promoBanner.deleteMany();
     await prisma.cmsPage.deleteMany();
+    await prisma.blogPost.deleteMany(); // Clear blog posts first
     await prisma.faqItem.deleteMany();
     await prisma.rider.deleteMany();
     await prisma.notification.deleteMany();

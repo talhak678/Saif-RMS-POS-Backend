@@ -252,12 +252,16 @@ model Order {
   items      OrderItem[]
   customerId String?     @map("customer_id")
   customer   Customer?   @relation(fields: [customerId], references: [id])
+  riderId    String?     @map("rider_id")
+  rider      Rider?      @relation(fields: [riderId], references: [id])
   review     Review?
   createdAt  DateTime    @default(now()) @map("created_at")
   updatedAt  DateTime    @updatedAt @map("updated_at")
 
   @@map("orders")
 }
+
+
 
 enum OrderStatus {
   PENDING
@@ -374,9 +378,9 @@ model Rider {
   status       RiderStatus @default(AVAILABLE)
   restaurantId String      @map("restaurant_id")
   restaurant   Restaurant  @relation(fields: [restaurantId], references: [id])
+  orders       Order[]
   createdAt    DateTime    @default(now()) @map("created_at")
   updatedAt    DateTime    @updatedAt @map("updated_at")
-
   @@map("riders")
 }
 
