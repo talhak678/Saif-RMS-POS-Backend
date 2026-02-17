@@ -27,3 +27,12 @@ export const websiteConfigSchema = z.object({
     primaryColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color').optional(),
     configJson: z.any(), // Flexible JSON structure based on documentation-cms.md
 })
+
+export const blogPostSchema = z.object({
+    title: z.string().min(5, 'Title must be at least 5 characters'),
+    snippet: z.string().optional(),
+    content: z.string().min(20, 'Content must be at least 20 characters'),
+    imageUrl: z.string().url('Invalid image URL').optional().or(z.literal('')),
+    author: z.string().optional(),
+    restaurantId: z.string().cuid('Invalid restaurant ID'),
+})
