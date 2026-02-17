@@ -5,6 +5,7 @@ export const discountCodeSchema = z.object({
     percentage: z.number().min(0).max(100).optional(),
     amount: z.number().min(0).optional(),
     isActive: z.boolean().default(true),
+    restaurantId: z.string().cuid('Invalid restaurant ID'),
     expiresAt: z.string().optional().transform((val) => (val ? new Date(val) : undefined)),
 }).refine(data => data.percentage !== undefined || data.amount !== undefined, {
     message: "Either percentage or amount must be provided",
@@ -21,4 +22,5 @@ export const riderSchema = z.object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
     phone: z.string().optional(),
     status: z.enum(['AVAILABLE', 'BUSY', 'OFFLINE']).default('AVAILABLE'),
+    restaurantId: z.string().cuid('Invalid restaurant ID'),
 })
