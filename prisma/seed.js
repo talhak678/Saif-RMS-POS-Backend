@@ -737,7 +737,36 @@ async function main() {
         }),
     ]);
 
-    // 13. Create Orders with Items and Payments
+    // 13. Create Riders (Moved before orders)
+    console.log('🏍️  Creating riders...');
+    const riders = await Promise.all([
+        prisma.rider.create({
+            data: {
+                name: 'Bilal Ahmed',
+                phone: '+92 300 8888888',
+                status: 'AVAILABLE',
+                restaurantId: restaurant.id
+            }
+        }),
+        prisma.rider.create({
+            data: {
+                name: 'Kashif Ali',
+                phone: '+92 321 9999999',
+                status: 'BUSY',
+                restaurantId: restaurant.id
+            }
+        }),
+        prisma.rider.create({
+            data: {
+                name: 'Fahad Malik',
+                phone: '+92 333 0000000',
+                status: 'AVAILABLE',
+                restaurantId: restaurant.id
+            }
+        }),
+    ]);
+
+    // 14. Create Orders with Items and Payments
     console.log('🛒 Creating orders...');
 
     // Order 1 - Delivered
@@ -747,6 +776,7 @@ async function main() {
             customerId: customers[0].id,
             type: 'DELIVERY',
             status: 'DELIVERED',
+            riderId: riders[0].id, // Assigned to Bilal
             total: 1830,
             items: {
                 create: [
@@ -803,6 +833,7 @@ async function main() {
             customerId: customers[2].id,
             type: 'DELIVERY',
             status: 'OUT_FOR_DELIVERY',
+            riderId: riders[1].id, // Assigned to Kashif
             total: 1740,
             items: {
                 create: [
@@ -978,34 +1009,7 @@ async function main() {
         }),
     ]);
 
-    // 17. Create Riders
-    console.log('🏍️  Creating riders...');
-    await Promise.all([
-        prisma.rider.create({
-            data: {
-                name: 'Bilal Ahmed',
-                phone: '+92 300 8888888',
-                status: 'AVAILABLE',
-                restaurantId: restaurant.id
-            }
-        }),
-        prisma.rider.create({
-            data: {
-                name: 'Kashif Ali',
-                phone: '+92 321 9999999',
-                status: 'BUSY',
-                restaurantId: restaurant.id
-            }
-        }),
-        prisma.rider.create({
-            data: {
-                name: 'Fahad Malik',
-                phone: '+92 333 0000000',
-                status: 'AVAILABLE',
-                restaurantId: restaurant.id
-            }
-        }),
-    ]);
+
 
     // 18. Create Discount Codes
     console.log('🎁 Creating discount codes...');
