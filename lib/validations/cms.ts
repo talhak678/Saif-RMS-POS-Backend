@@ -32,7 +32,9 @@ export const blogPostSchema = z.object({
     title: z.string().min(5, 'Title must be at least 5 characters'),
     snippet: z.string().optional(),
     content: z.string().min(20, 'Content must be at least 20 characters'),
-    imageUrl: z.string().url('Invalid image URL').optional().or(z.literal('')),
+    imageUrl: z.string().optional().refine((val) => !val || val === '' || z.string().url().safeParse(val).success, {
+        message: 'Must be a valid URL or empty'
+    }),
     author: z.string().optional(),
     restaurantId: z.string().cuid('Invalid restaurant ID'),
 })
