@@ -15,8 +15,13 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
             else restaurantId = undefined;
         }
 
+        const status = searchParams.get('status');
+
         const riders = await prisma.rider.findMany({
-            where: restaurantId ? { restaurantId } : {},
+            where: {
+                ...(restaurantId ? { restaurantId } : {}),
+                ...(status ? { status: status as any } : {})
+            },
             orderBy: { createdAt: 'desc' }
         })
         return successResponse(riders)

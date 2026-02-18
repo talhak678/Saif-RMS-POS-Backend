@@ -1,5 +1,6 @@
 import { z } from 'zod'
-import { OrderStatus, OrderType, PaymentMethod, PaymentStatus } from '@prisma/client'
+import { OrderStatus, OrderType, PaymentMethod, PaymentStatus, RiderStatus } from '@prisma/client'
+import { riderSchema } from './marketing'
 
 export const orderItemSchema = z.object({
     menuItemId: z.string().min(1, 'Menu item ID is required'),
@@ -19,4 +20,5 @@ export const orderCreateSchema = z.object({
 export const orderUpdateSchema = z.object({
     status: z.nativeEnum(OrderStatus).optional(),
     paymentStatus: z.nativeEnum(PaymentStatus).optional(),
+    riderId: z.string().optional().nullable(),
 })

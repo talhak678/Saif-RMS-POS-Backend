@@ -18,7 +18,8 @@ export const GET = withAuth(async (req, { params, auth }) => {
                 items: { include: { menuItem: true } },
                 payment: true,
                 customer: true,
-                branch: true
+                branch: true,
+                rider: true
             },
         })
 
@@ -49,12 +50,14 @@ export const PUT = withAuth(async (req, { params, auth }) => {
             return errorResponse('Validation failed', validation.error.flatten().fieldErrors, 400)
         }
 
-        const { status, paymentStatus } = validation.data
+        const { status, paymentStatus, riderId } = validation.data
 
         const order = await prisma.order.update({
             where: { id },
             data: {
                 ...(status && { status }),
+                ...(riderId !== undefined && { riderId }),
+
                 ...(paymentStatus && {
                     payment: {
                         update: { status: paymentStatus }
@@ -64,7 +67,8 @@ export const PUT = withAuth(async (req, { params, auth }) => {
             include: {
                 payment: true,
                 items: true,
-                customer: true
+                customer: true,
+                rider: true
             }
         })
 

@@ -11,7 +11,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
         const branchId = searchParams.get('branchId')
         const status = searchParams.get('status') as OrderStatus | null
         const customerId = searchParams.get('customerId')
-        
+
         // Multi-tenancy logic
         let restaurantId = auth.restaurantId;
         if (auth.role === 'Super Admin') {
@@ -34,7 +34,8 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
                 items: { include: { menuItem: true } },
                 payment: true,
                 customer: true,
-                branch: true
+                branch: true,
+                rider: true
             },
             orderBy: { createdAt: 'desc' },
         })

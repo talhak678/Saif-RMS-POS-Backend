@@ -475,6 +475,9 @@ model WebsiteConfig {
   @@map("website_configs")
 }
 
+
+
+
 model Review {
   id         String    @id @default(cuid())
   rating     Int
