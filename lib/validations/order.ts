@@ -12,6 +12,7 @@ export const orderCreateSchema = z.object({
     branchId: z.string().min(1, 'Branch ID is required'),
     customerId: z.string().optional().nullable(),
     type: z.nativeEnum(OrderType),
+    source: z.enum(['WEBSITE', 'POS', 'MOBILE']).optional().default('POS'),
     total: z.number().positive('Total must be positive'),
     paymentMethod: z.nativeEnum(PaymentMethod).optional(),
     items: z.array(orderItemSchema).min(1, 'Order must have at least one item'),

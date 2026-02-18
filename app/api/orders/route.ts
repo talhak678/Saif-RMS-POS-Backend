@@ -55,7 +55,7 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
             return errorResponse('Validation failed', validation.error.flatten().fieldErrors, 400)
         }
 
-        const { branchId, customerId, type, items, paymentMethod, total } = validation.data
+        const { branchId, customerId, type, source, items, paymentMethod, total } = validation.data
 
         // Security check: Verify the branchId belongs to the correct restaurant
         if (auth.role !== 'Super Admin' && auth.restaurantId) {
@@ -74,6 +74,7 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
                     branchId,
                     customerId,
                     type,
+                    source: source as any,
                     total,
                     status: OrderStatus.PENDING,
                     items: {
