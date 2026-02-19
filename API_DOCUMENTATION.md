@@ -22,12 +22,13 @@ This comprehensive documentation covers all 45+ API endpoints for the Restaurant
 10. [Customer Management](#9-customer-management)
 11. [Payment Management](#10-payment-management)
 12. [Reservations](#11-reservations)
-13. [CMS & Content](#12-cms--content)
-14. [Marketing](#13-marketing)
-15. [Delivery & Riders](#14-delivery--riders)
-16. [Notifications](#15-notifications)
-17. [Dashboard Analytics](#16-dashboard-analytics)
-18. [Enums & Constants](#enums--constants)
+13. [Table Services](#12-table-services)
+14. [CMS & Content](#13-cms--content)
+15. [Marketing](#14-marketing)
+16. [Delivery & Riders](#15-delivery--riders)
+17. [Notifications](#16-notifications)
+18. [Dashboard Analytics](#17-dashboard-analytics)
+19. [Enums & Constants](#enums--constants)
 
 ---
 
@@ -949,6 +950,8 @@ Get all reservations.
 
 **Query Parameters:**
 - `branchId` (optional) - Filter by branch
+- `status` (optional) - Filter by status (BOOKED, ARRIVED, CANCELLED, COMPLETED)
+- `tableId` (optional) - Filter by table
 
 **Response:**
 ```json
@@ -963,7 +966,9 @@ Get all reservations.
       "startTime": "2026-02-15T19:00:00Z",
       "status": "BOOKED",
       "branchId": "clxxx...",
-      "branch": { "name": "Main Branch" },
+      "branch": { "id": "clxxx...", "name": "Main Branch" },
+      "tableId": "clxxx...",
+      "table": { "id": "clxxx...", "number": 5, "capacity": 4, "status": "RESERVED" },
       "createdAt": "2026-02-12T10:00:00Z"
     }
   ]
@@ -973,7 +978,7 @@ Get all reservations.
 ---
 
 ### POST `/api/reservations`
-Create a new reservation.
+Create a new reservation. If `tableId` is provided, table status auto-changes to **RESERVED**.
 
 **Request Body:**
 ```json
@@ -982,10 +987,14 @@ Create a new reservation.
   "phone": "+92 300 1234567",
   "guestCount": 6,
   "startTime": "2026-02-15T19:00:00Z",
-  "status": "BOOKED",
-  "branchId": "clxxx..."
+  "branchId": "clxxx...",
+  "tableId": "clxxx..."   // Optional — links a table and marks it RESERVED
 }
 ```
+
+**Business Logic:**
+- If `tableId` provided: table must be `AVAILABLE`, else 409 error
+- On create: table status → `RESERVED` automatically
 
 **Reservation Status:**
 - BOOKED - Reservation confirmed
@@ -996,17 +1005,129 @@ Create a new reservation.
 ---
 
 ### GET `/api/reservations/[id]`
-Get reservation details.
+Get reservation details (includes branch and linked table).
 
 ---
 
 ### PUT `/api/reservations/[id]`
-Update reservation.
+Update reservation. Smart table status management:
+- Status → CANCELLED or COMPLETED: linked table auto-resets to `AVAILABLE`
+- `tableId` changed to new table: old table → `AVAILABLE`, new table → `RESERVED`
+
+**Request Body:** Same as POST.
 
 ---
 
 ### DELETE `/api/reservations/[id]`
-Cancel/delete reservation.
+Delete reservation. Linked table auto-resets to `AVAILABLE`.
+
+---
+
+## 12. Table Services
+
+### GET `/api/tables`
+Get all tables with branch info and reservation count.
+
+**Query Parameters:**
+- `branchId` (optional) - Filter by branch
+- `status` (optional) - Filter by status: `AVAILABLE`, `OCCUPIED`, `RESERVED`
+- `restaurantId` (optional, Super Admin only) - Filter by restaurant
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "clxxx...",
+      "number": 5,
+      "capacity": 4,
+      "status": "AVAILABLE",
+      "branchId": "clxxx...",
+      "branch": { "id": "clxxx...", "name": "Main Branch" },
+      "_count": { "reservations": 3 },
+      "createdAt": "2026-02-12T10:00:00Z",
+      "updatedAt": "2026-02-12T10:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### POST `/api/tables`
+Create a new table.
+
+**Request Body:**
+```json
+{
+  "number": 5,
+  "capacity": 4,
+  "branchId": "clxxx...",
+  "status": "AVAILABLE"   // Optional, default: AVAILABLE
+}
+```
+
+**Validation:**
+- `number`: Required, positive integer, unique per branch
+- `capacity`: Required, positive integer
+- `branchId`: Required
+- `status`: Optional — AVAILABLE, OCCUPIED, RESERVED
+
+**Error (409):** If table number already exists in this branch.
+
+---
+
+### GET `/api/tables/[id]`
+Get table details with active reservations (BOOKED or ARRIVED only).
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "clxxx...",
+    "number": 5,
+    "capacity": 4,
+    "status": "RESERVED",
+    "branch": { "id": "clxxx...", "name": "Main Branch" },
+    "reservations": [
+      {
+        "id": "clxxx...",
+        "customerName": "Ahmed Khan",
+        "guestCount": 4,
+        "startTime": "2026-02-15T19:00:00Z",
+        "status": "BOOKED"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### PUT `/api/tables/[id]`
+Update table details or status.
+
+**Request Body:**
+```json
+{
+  "status": "OCCUPIED"     // Mark table as occupied (walk-in)
+  // OR
+  "number": 6,
+  "capacity": 6
+}
+```
+
+**Use cases:**
+- Waiter manually marks table as `OCCUPIED` when walk-in customer sits
+- Waiter marks table as `AVAILABLE` after customer leaves
+- Update table number or capacity
+
+---
+
+### DELETE `/api/tables/[id]`
+Delete a table.
 
 ---
 
@@ -1609,6 +1730,24 @@ enum ResStatus {
 }
 ```
 
+### TableStatus
+```typescript
+enum TableStatus {
+  AVAILABLE  // Table is free
+  OCCUPIED   // Table is currently in use
+  RESERVED   // Table is reserved for a booking
+}
+```
+
+### OrderSource
+```typescript
+enum OrderSource {
+  WEBSITE  // Order from website
+  POS      // Order from POS system
+  MOBILE   // Order from mobile app
+}
+```
+
 ---
 
 ## Error Handling Examples
@@ -1660,6 +1799,6 @@ enum ResStatus {
 
 For questions or issues, contact the development team or refer to the project repository.
 
-**Last Updated:** February 12, 2026  
-**Version:** 1.0  
-**Total Endpoints:** 47+
+**Last Updated:** February 19, 2026  
+**Version:** 1.1  
+**Total Endpoints:** 55+

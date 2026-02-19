@@ -119,6 +119,7 @@ model Branch {
   orders       Order[]
   stocks       Stock[]
   reservations Reservation[]
+  tables       Table[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -520,6 +521,8 @@ model Reservation {
   status       ResStatus @default(BOOKED)
   branchId     String    @map("branch_id")
   branch       Branch    @relation(fields: [branchId], references: [id])
+  tableId      String?   @map("table_id")
+  table        Table?    @relation(fields: [tableId], references: [id])
   createdAt    DateTime  @default(now()) @map("created_at")
 
   @@map("reservations")
@@ -530,4 +533,29 @@ enum ResStatus {
   ARRIVED
   CANCELLED
   COMPLETED
+}
+
+// ---------------------------------------------------------
+// 12. Table Management
+// ---------------------------------------------------------
+
+model Table {
+  id           String       @id @default(cuid())
+  number       Int
+  capacity     Int
+  status       TableStatus  @default(AVAILABLE)
+  branchId     String       @map("branch_id")
+  branch       Branch       @relation(fields: [branchId], references: [id])
+  reservations Reservation[]
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  @@unique([branchId, number])
+  @@map("tables")
+}
+
+enum TableStatus {
+  AVAILABLE
+  OCCUPIED
+  RESERVED
 }

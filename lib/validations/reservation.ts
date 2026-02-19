@@ -7,4 +7,6 @@ export const reservationSchema = z.object({
     startTime: z.string().transform((val) => new Date(val)),
     status: z.enum(['BOOKED', 'ARRIVED', 'CANCELLED', 'COMPLETED']).default('BOOKED'),
     branchId: z.string().cuid('Invalid branch ID'),
+    tableId: z.string().cuid('Invalid table ID').optional().nullable(),
 })
+
