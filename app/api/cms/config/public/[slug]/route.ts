@@ -21,9 +21,7 @@ export async function GET(
                 branches: true,
                 categories: {
                     include: {
-                        menuItems: {
-                            where: { isAvailable: true }
-                        }
+                        menuItems: true
                     }
                 }
             }

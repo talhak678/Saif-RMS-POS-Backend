@@ -128,33 +128,40 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        const safeTotal = parseFloat(finalTotal.toFixed(2));
+        if (isNaN(safeTotal)) throw new Error('Invalid total calculated');
+
         const result = await prisma.$transaction(async (tx) => {
+            // Create the order
             const order = await tx.order.create({
                 data: {
                     branchId,
                     customerId: customer.customerId,
-                    type,
-                    total: finalTotal,
+                    type: type as any,
+                    source: 'WEBSITE',
+                    total: safeTotal,
                     status: 'PENDING',
                     deliveryAddress,
-                    deliveryLat,
-                    deliveryLng,
-                    deliveryCharge,
+                    deliveryLat: deliveryLat ? parseFloat(deliveryLat.toString()) : null,
+                    deliveryLng: deliveryLng ? parseFloat(deliveryLng.toString()) : null,
+                    deliveryCharge: deliveryCharge ? parseFloat(parseFloat(deliveryCharge.toString()).toFixed(2)) : 0,
+                    notes,
                     items: {
                         create: items.map((item: any) => ({
                             menuItemId: item.menuItemId,
-                            quantity: item.quantity,
-                            price: item.price,
+                            quantity: parseInt(item.quantity.toString()) || 1,
+                            price: parseFloat(parseFloat(item.price.toString()).toFixed(2)) || 0,
                         })),
                     },
                 } as any,
             })
 
+            // Create the payment record
             await tx.payment.create({
                 data: {
                     orderId: order.id,
-                    amount: finalTotal,
-                    method: paymentMethod === 'CASH' ? 'CASH' : 'COD',
+                    amount: safeTotal,
+                    method: paymentMethod === 'STRIPE' ? 'STRIPE' : (paymentMethod === 'PAYPAL' ? 'PAYPAL' : (paymentMethod === 'CASH' ? 'CASH' : 'COD')),
                     status: 'PENDING',
                 },
             })
@@ -162,15 +169,20 @@ export async function POST(req: NextRequest) {
             return order
         })
 
+        // Fetch the full order details for the response
         const fullOrder = await prisma.order.findUnique({
             where: { id: result.id },
             include: {
                 items: { include: { menuItem: true } },
                 payment: true,
-                customer: { select: { name: true, email: true, phone: true } },
-                branch: { select: { name: true, address: true } }
+                customer: { select: { id: true, name: true, email: true, phone: true } },
+                branch: { select: { id: true, name: true, address: true } }
             }
         })
+
+        if (!fullOrder) {
+            return errorResponse('Order created but could not be retrieved', null, 500)
+        }
 
         return successResponse({
             ...fullOrder,
@@ -181,6 +193,7 @@ export async function POST(req: NextRequest) {
             } : null
         }, 'Order placed successfully', 201)
     } catch (error: any) {
+        console.error('💥 Order Creation Error:', error);
         return errorResponse('Failed to place order', error.message, 500)
     }
 }
