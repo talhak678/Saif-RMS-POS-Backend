@@ -15,6 +15,10 @@ export const orderCreateSchema = z.object({
     total: z.number().positive('Total must be positive'),
     paymentMethod: z.nativeEnum(PaymentMethod).optional(),
     items: z.array(orderItemSchema).min(1, 'Order must have at least one item'),
+    deliveryAddress: z.string().optional().nullable(),
+    deliveryLat: z.number().optional().nullable(),
+    deliveryLng: z.number().optional().nullable(),
+    deliveryCharge: z.number().optional().nullable(),
 })
 
 export const orderUpdateSchema = z.object({

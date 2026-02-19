@@ -47,6 +47,11 @@ export async function getAuthContext(req?: NextRequest) {
     const cookieStore = await cookies();
     let token = cookieStore.get("auth_token")?.value;
 
+    // Also check for customer-token if auth_token is missing
+    if (!token) {
+        token = cookieStore.get("customer-token")?.value;
+    }
+
     if (!token && req) {
         const authHeader = req.headers.get("Authorization") || req.headers.get("authorization");
         if (authHeader?.startsWith("Bearer ")) {
@@ -56,7 +61,21 @@ export async function getAuthContext(req?: NextRequest) {
 
     if (!token) return null;
 
-    return await verifyToken(token);
+    try {
+        const payload = await verifyToken(token);
+        // Normalize payload to ensure customerId is handled if present
+        if (payload && (payload as any).customerId) {
+            return {
+                userId: (payload as any).customerId,
+                email: payload.email,
+                role: 'customer',
+                restaurantId: payload.restaurantId
+            } as AuthPayload;
+        }
+        return payload;
+    } catch (e) {
+        return null;
+    }
 }
 
 export async function clearAuthCookie() {

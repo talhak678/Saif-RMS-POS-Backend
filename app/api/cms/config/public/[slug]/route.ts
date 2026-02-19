@@ -18,6 +18,7 @@ export async function GET(
                 promos: { where: { isActive: true } },
                 faqItems: true,
                 blogPosts: { orderBy: { publishedAt: 'desc' } },
+                branches: true,
                 categories: {
                     include: {
                         menuItems: {
@@ -48,6 +49,7 @@ export async function GET(
             promos: restaurant.promos,
             faqs: restaurant.faqItems,
             blogs: restaurant.blogPosts,
+            branches: restaurant.branches,
             menu: restaurant.categories
         }
 
