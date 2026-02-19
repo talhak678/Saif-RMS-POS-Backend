@@ -39,6 +39,7 @@ export async function GET(
         }
 
         const data = {
+            restaurantId: restaurant.id,
             restaurantLogo: restaurant.logo,
             restaurantName: restaurant.name,
             config: restaurant.websiteConfig || {
