@@ -247,6 +247,7 @@ model Order {
   orderNo    Int         @default(autoincrement()) @map("order_no")
   status     OrderStatus @default(PENDING)
   type       OrderType
+  source     OrderSource @default(POS) @map("source")
   total      Decimal     @db.Decimal(10, 2)
   branchId   String      @map("branch_id")
   branch     Branch      @relation(fields: [branchId], references: [id])
@@ -286,6 +287,12 @@ enum OrderType {
   DINE_IN
   DELIVERY
   PICKUP
+}
+
+enum OrderSource {
+  WEBSITE
+  POS
+  MOBILE
 }
 
 model OrderItem {
