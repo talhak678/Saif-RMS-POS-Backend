@@ -131,6 +131,8 @@ export async function POST(req: NextRequest) {
         const safeTotal = parseFloat(finalTotal.toFixed(2));
         if (isNaN(safeTotal)) throw new Error('Invalid total calculated');
 
+
+
         const result = await prisma.$transaction(async (tx) => {
             // Create the order
             const order = await tx.order.create({
@@ -146,6 +148,7 @@ export async function POST(req: NextRequest) {
                     deliveryLng: deliveryLng ? parseFloat(deliveryLng.toString()) : null,
                     deliveryCharge: deliveryCharge ? parseFloat(parseFloat(deliveryCharge.toString()).toFixed(2)) : 0,
                     notes,
+                    discountCode,
                     items: {
                         create: items.map((item: any) => ({
                             menuItemId: item.menuItemId,
@@ -193,7 +196,12 @@ export async function POST(req: NextRequest) {
             } : null
         }, 'Order placed successfully', 201)
     } catch (error: any) {
-        console.error('💥 Order Creation Error:', error);
+        console.error('💥 Order Creation Error Details:', {
+            message: error.message,
+            stack: error.stack,
+            code: error.code,
+            meta: error.meta
+        });
         return errorResponse('Failed to place order', error.message, 500)
     }
 }

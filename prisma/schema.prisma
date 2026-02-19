@@ -263,6 +263,8 @@ model Order {
   deliveryLat     Float?    @map("delivery_lat")
   deliveryLng     Float?    @map("delivery_lng")
   deliveryCharge  Decimal?  @map("delivery_charge") @db.Decimal(10, 2)
+  notes           String?
+  discountCode    String?   @map("discount_code")
 
   review     Review?
   createdAt  DateTime    @default(now()) @map("created_at")
