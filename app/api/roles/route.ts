@@ -4,9 +4,14 @@ import { NextRequest } from 'next/server'
 import { roleSchema } from '@/lib/validations/role'
 import { withAuth } from '@/lib/with-auth'
 
-export const GET = withAuth(async () => {
+export const GET = withAuth(async (req: NextRequest, { auth }) => {
     try {
         const roles = await prisma.role.findMany({
+            where: auth.role !== 'Super Admin' ? {
+                NOT: {
+                    name: 'Super Admin'
+                }
+            } : {},
             include: {
                 permissions: true,
                 _count: { select: { users: true } },
@@ -45,4 +50,4 @@ export const POST = withAuth(async (req: NextRequest) => {
         if (error.code === 'P2002') return errorResponse('Role name already exists')
         return errorResponse('Failed to create role', error.message, 500)
     }
-}, { roles: ['Super Admin'] }) // Only super admins manage system-wide roles
+}, { roles: ['Super Admin', 'Admin', 'Manager'] }) // Super Admin and Admin can manage roles
