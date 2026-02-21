@@ -29,3 +29,44 @@ export async function GET(req: NextRequest) {
         return errorResponse('Failed to fetch user', error.message, 500)
     }
 }
+export async function PUT(req: NextRequest) {
+    try {
+        const payload = await getAuthContext(req)
+
+        if (!payload) {
+            return errorResponse('Not authenticated', null, 401)
+        }
+
+        const body = await req.json()
+        const { name, logo } = body
+
+        // Update User Name
+        if (name) {
+            await prisma.user.update({
+                where: { id: payload.userId },
+                data: { name }
+            })
+        }
+
+        // Update Restaurant Logo if provided
+        if (logo && payload.restaurantId) {
+            await prisma.restaurant.update({
+                where: { id: payload.restaurantId },
+                data: { logo }
+            })
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: payload.userId },
+            include: {
+                role: { include: { permissions: true } },
+                restaurant: true
+            }
+        })
+
+        const { password, ...sanitizedUser } = user as any
+        return successResponse(sanitizedUser, 'Profile updated successfully')
+    } catch (error: any) {
+        return errorResponse('Failed to update profile', error.message, 500)
+    }
+}
