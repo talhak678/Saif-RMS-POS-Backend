@@ -8,7 +8,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
     try {
         // Only Super Admin can see all restaurants
         // Regular Admin sees only their own
-        const restaurantId = auth.role === 'Super Admin' ? undefined : auth.restaurantId;
+        const restaurantId = auth.role === 'SUPER_ADMIN' ? undefined : auth.restaurantId;
 
         const restaurants = await prisma.restaurant.findMany({
             where: restaurantId ? { id: restaurantId } : {},
@@ -42,4 +42,4 @@ export const POST = withAuth(async (req: NextRequest) => {
         if (error.code === 'P2002') return errorResponse('Restaurant slug already exists')
         return errorResponse('Failed to create restaurant', error.message, 500)
     }
-}, { roles: ['Super Admin'] }) // Only super admins can create new restaurants
+}, { roles: ['SUPER_ADMIN'] }) // Only super admins can create new restaurants

@@ -12,7 +12,7 @@ export const GET = withAuth(async (req, { params, auth }) => {
         const category = await prisma.category.findFirst({
             where: {
                 id,
-                ...(auth.role !== 'Super Admin' && restaurantId ? { restaurantId } : {})
+                ...(auth.role !== 'SUPER_ADMIN' && restaurantId ? { restaurantId } : {})
             },
             include: { menuItems: true }
         })
@@ -31,7 +31,7 @@ export const PUT = withAuth(async (req, { params, auth }) => {
         const body = await req.json()
 
         // Ensure restaurantId is injected
-        if (auth.role !== 'Super Admin' || !body.restaurantId) {
+        if (auth.role !== 'SUPER_ADMIN' || !body.restaurantId) {
             body.restaurantId = restaurantId;
         }
 
@@ -44,7 +44,7 @@ export const PUT = withAuth(async (req, { params, auth }) => {
         const existing = await prisma.category.findFirst({
             where: {
                 id,
-                ...(auth.role !== 'Super Admin' && restaurantId ? { restaurantId } : {})
+                ...(auth.role !== 'SUPER_ADMIN' && restaurantId ? { restaurantId } : {})
             }
         })
 
@@ -70,7 +70,7 @@ export const DELETE = withAuth(async (req, { params, auth }) => {
         const existing = await prisma.category.findFirst({
             where: {
                 id,
-                ...(auth.role !== 'Super Admin' && restaurantId ? { restaurantId } : {})
+                ...(auth.role !== 'SUPER_ADMIN' && restaurantId ? { restaurantId } : {})
             }
         })
 

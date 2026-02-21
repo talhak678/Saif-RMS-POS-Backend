@@ -7,9 +7,9 @@ import { withAuth } from '@/lib/with-auth'
 export const GET = withAuth(async (req: NextRequest, { auth }) => {
     try {
         const roles = await prisma.role.findMany({
-            where: auth.role !== 'Super Admin' ? {
+            where: auth.role !== 'SUPER_ADMIN' ? {
                 NOT: {
-                    name: 'Super Admin'
+                    name: 'SUPER_ADMIN'
                 }
             } : {},
             include: {
@@ -50,4 +50,4 @@ export const POST = withAuth(async (req: NextRequest) => {
         if (error.code === 'P2002') return errorResponse('Role name already exists')
         return errorResponse('Failed to create role', error.message, 500)
     }
-}, { roles: ['Super Admin', 'Admin', 'Manager'] }) // Super Admin and Admin can manage roles
+}, { roles: ['SUPER_ADMIN', 'ADMIN', 'Manager'] }) // Super Admin and Admin can manage roles

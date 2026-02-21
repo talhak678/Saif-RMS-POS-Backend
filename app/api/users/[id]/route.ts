@@ -13,7 +13,7 @@ export const GET = withAuth(async (req, { params, auth }) => {
         const user = await prisma.user.findFirst({
             where: {
                 id,
-                ...(auth.role !== 'Super Admin' && restaurantId ? { restaurantId } : {})
+                ...(auth.role !== 'SUPER_ADMIN' && restaurantId ? { restaurantId } : {})
             },
             include: {
                 role: {
@@ -40,7 +40,7 @@ export const PUT = withAuth(async (req, { params, auth }) => {
         const existing = await prisma.user.findFirst({
             where: {
                 id,
-                ...(auth.role !== 'Super Admin' && restaurantId ? { restaurantId } : {})
+                ...(auth.role !== 'SUPER_ADMIN' && restaurantId ? { restaurantId } : {})
             }
         })
         if (!existing) return errorResponse('User not found or unauthorized', null, 404)
@@ -55,7 +55,7 @@ export const PUT = withAuth(async (req, { params, auth }) => {
         const { name, email, password, roleId, restaurantId: bodyRestId } = validation.data
         const data: any = { name, email, roleId }
 
-        if (auth.role === 'Super Admin') {
+        if (auth.role === 'SUPER_ADMIN') {
             data.restaurantId = bodyRestId;
         } else {
             data.restaurantId = restaurantId;
@@ -80,7 +80,7 @@ export const PUT = withAuth(async (req, { params, auth }) => {
         if (error.code === 'P2002') return errorResponse('Email already exists')
         return errorResponse('Failed to update user', error.message, 500)
     }
-}, { roles: ['Super Admin', 'Admin'] })
+}, { roles: ['SUPER_ADMIN', 'ADMIN'] })
 
 export const DELETE = withAuth(async (req, { params, auth }) => {
     try {
@@ -90,7 +90,7 @@ export const DELETE = withAuth(async (req, { params, auth }) => {
         const existing = await prisma.user.findFirst({
             where: {
                 id,
-                ...(auth.role !== 'Super Admin' && restaurantId ? { restaurantId } : {})
+                ...(auth.role !== 'SUPER_ADMIN' && restaurantId ? { restaurantId } : {})
             }
         })
         if (!existing) return errorResponse('User not found or unauthorized', null, 404)
@@ -100,4 +100,4 @@ export const DELETE = withAuth(async (req, { params, auth }) => {
     } catch (error: any) {
         return errorResponse('Failed to delete user', error.message, 500)
     }
-}, { roles: ['Super Admin', 'Admin'] })
+}, { roles: ['SUPER_ADMIN', 'ADMIN'] })

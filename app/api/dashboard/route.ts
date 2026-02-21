@@ -11,7 +11,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
 
         // Multi-tenancy logic
         let restaurantId = auth.restaurantId;
-        if (auth.role === 'Super Admin') {
+        if (auth.role === 'SUPER_ADMIN') {
             const queryRestId = searchParams.get('restaurantId')
             if (queryRestId) restaurantId = queryRestId;
             else restaurantId = undefined;

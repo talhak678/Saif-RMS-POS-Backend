@@ -12,7 +12,7 @@ export const GET = withAuth(async (req, { params, auth }) => {
         const order = await prisma.order.findFirst({
             where: {
                 id,
-                ...(auth.role !== 'Super Admin' && restaurantId ? { branch: { restaurantId } } : {})
+                ...(auth.role !== 'SUPER_ADMIN' && restaurantId ? { branch: { restaurantId } } : {})
             },
             include: {
                 items: { include: { menuItem: true } },
@@ -38,7 +38,7 @@ export const PUT = withAuth(async (req, { params, auth }) => {
         const existing = await prisma.order.findFirst({
             where: {
                 id,
-                ...(auth.role !== 'Super Admin' && restaurantId ? { branch: { restaurantId } } : {})
+                ...(auth.role !== 'SUPER_ADMIN' && restaurantId ? { branch: { restaurantId } } : {})
             }
         })
         if (!existing) return errorResponse('Order not found or unauthorized', null, 404)

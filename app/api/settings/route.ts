@@ -15,7 +15,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
         const { searchParams } = new URL(req.url)
         let restaurantId = auth.restaurantId;
 
-        if (auth.role === 'Super Admin') {
+        if (auth.role === 'SUPER_ADMIN') {
             const queryRestId = searchParams.get('restaurantId')
             if (queryRestId) restaurantId = queryRestId;
             else restaurantId = undefined;
@@ -35,7 +35,7 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
         const body = await req.json()
 
         // Inject restaurantId
-        if (auth.role !== 'Super Admin' || !body.restaurantId) {
+        if (auth.role !== 'SUPER_ADMIN' || !body.restaurantId) {
             body.restaurantId = auth.restaurantId;
         }
 
@@ -63,4 +63,4 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
     } catch (error: any) {
         return errorResponse('Failed to save setting', error.message, 500)
     }
-}, { roles: ['Super Admin', 'Admin'] })
+}, { roles: ['SUPER_ADMIN', 'ADMIN'] })

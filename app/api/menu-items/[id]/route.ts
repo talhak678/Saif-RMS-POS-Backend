@@ -12,7 +12,7 @@ export const GET = withAuth(async (req, { params, auth }) => {
         const menuItem = await prisma.menuItem.findFirst({
             where: {
                 id,
-                ...(auth.role !== 'Super Admin' && restaurantId ? { restaurantId } : {})
+                ...(auth.role !== 'SUPER_ADMIN' && restaurantId ? { restaurantId } : {})
             },
             include: { category: true, variations: true, addons: true, reviews: true }
         })
@@ -33,13 +33,13 @@ export const PUT = withAuth(async (req, { params, auth }) => {
         const existing = await prisma.menuItem.findFirst({
             where: {
                 id,
-                ...(auth.role !== 'Super Admin' && restaurantId ? { restaurantId } : {})
+                ...(auth.role !== 'SUPER_ADMIN' && restaurantId ? { restaurantId } : {})
             }
         })
         if (!existing) return errorResponse('Menu item not found or unauthorized', null, 404)
 
         const body = await req.json()
-        if (auth.role !== 'Super Admin' || !body.restaurantId) {
+        if (auth.role !== 'SUPER_ADMIN' || !body.restaurantId) {
             body.restaurantId = restaurantId;
         }
 
@@ -72,7 +72,7 @@ export const PUT = withAuth(async (req, { params, auth }) => {
     } catch (error: any) {
         return errorResponse('Failed to update menu item', error.message, 500)
     }
-}, { roles: ['Super Admin', 'Admin'] })
+}, { roles: ['SUPER_ADMIN', 'ADMIN'] })
 
 export const DELETE = withAuth(async (req, { params, auth }) => {
     try {
@@ -82,7 +82,7 @@ export const DELETE = withAuth(async (req, { params, auth }) => {
         const existing = await prisma.menuItem.findFirst({
             where: {
                 id,
-                ...(auth.role !== 'Super Admin' && restaurantId ? { restaurantId } : {})
+                ...(auth.role !== 'SUPER_ADMIN' && restaurantId ? { restaurantId } : {})
             }
         })
         if (!existing) return errorResponse('Menu item not found or unauthorized', null, 404)
@@ -92,4 +92,4 @@ export const DELETE = withAuth(async (req, { params, auth }) => {
     } catch (error: any) {
         return errorResponse('Failed to delete menu item', error.message, 500)
     }
-}, { roles: ['Super Admin', 'Admin'] })
+}, { roles: ['SUPER_ADMIN', 'ADMIN'] })

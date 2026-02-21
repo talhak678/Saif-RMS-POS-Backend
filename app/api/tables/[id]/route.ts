@@ -12,7 +12,7 @@ export const GET = withAuth(async (req: NextRequest, { params, auth }) => {
         const table = await prisma.table.findFirst({
             where: {
                 id,
-                ...(auth.role !== 'Super Admin' && restaurantId ? { branch: { restaurantId } } : {})
+                ...(auth.role !== 'SUPER_ADMIN' && restaurantId ? { branch: { restaurantId } } : {})
             },
             include: {
                 branch: { select: { id: true, name: true } },
@@ -45,7 +45,7 @@ export const PUT = withAuth(async (req: NextRequest, { params, auth }) => {
         const existing = await prisma.table.findFirst({
             where: {
                 id,
-                ...(auth.role !== 'Super Admin' && restaurantId ? { branch: { restaurantId } } : {})
+                ...(auth.role !== 'SUPER_ADMIN' && restaurantId ? { branch: { restaurantId } } : {})
             }
         })
         if (!existing) return errorResponse('Table not found or unauthorized', null, 404)
@@ -81,7 +81,7 @@ export const DELETE = withAuth(async (req: NextRequest, { params, auth }) => {
         const existing = await prisma.table.findFirst({
             where: {
                 id,
-                ...(auth.role !== 'Super Admin' && restaurantId ? { branch: { restaurantId } } : {})
+                ...(auth.role !== 'SUPER_ADMIN' && restaurantId ? { branch: { restaurantId } } : {})
             }
         })
         if (!existing) return errorResponse('Table not found or unauthorized', null, 404)

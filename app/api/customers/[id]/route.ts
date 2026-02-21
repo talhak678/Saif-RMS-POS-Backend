@@ -12,7 +12,7 @@ export const GET = withAuth(async (req, { params, auth }) => {
         const customer = await prisma.customer.findFirst({
             where: {
                 id,
-                ...(auth.role !== 'Super Admin' && restaurantId ? { restaurantId } : {})
+                ...(auth.role !== 'SUPER_ADMIN' && restaurantId ? { restaurantId } : {})
             },
             include: {
                 orders: {
@@ -40,7 +40,7 @@ export const PUT = withAuth(async (req, { params, auth }) => {
         const existing = await prisma.customer.findFirst({
             where: {
                 id,
-                ...(auth.role !== 'Super Admin' && restaurantId ? { restaurantId } : {})
+                ...(auth.role !== 'SUPER_ADMIN' && restaurantId ? { restaurantId } : {})
             }
         })
         if (!existing) return errorResponse('Customer not found or unauthorized', null, 404)
@@ -74,7 +74,7 @@ export const DELETE = withAuth(async (req, { params, auth }) => {
         const existing = await prisma.customer.findFirst({
             where: {
                 id,
-                ...(auth.role !== 'Super Admin' && restaurantId ? { restaurantId } : {})
+                ...(auth.role !== 'SUPER_ADMIN' && restaurantId ? { restaurantId } : {})
             }
         })
         if (!existing) return errorResponse('Customer not found or unauthorized', null, 404)
@@ -84,4 +84,4 @@ export const DELETE = withAuth(async (req, { params, auth }) => {
     } catch (error: any) {
         return errorResponse('Failed to delete customer', error.message, 500)
     }
-}, { roles: ['Super Admin', 'Admin', 'Manager'] })
+}, { roles: ['SUPER_ADMIN', 'ADMIN', 'Manager'] })

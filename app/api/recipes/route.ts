@@ -10,7 +10,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
         const menuItemId = searchParams.get('menuItemId')
 
         let restaurantId = auth.restaurantId;
-        if (auth.role === 'Super Admin') {
+        if (auth.role === 'SUPER_ADMIN') {
             const queryRestId = searchParams.get('restaurantId')
             if (queryRestId) restaurantId = queryRestId;
             else restaurantId = undefined;
@@ -42,7 +42,7 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
         const { menuItemId } = validation.data
 
         // Security check: Verify menuItem belongs to restaurant
-        if (auth.role !== 'Super Admin' && auth.restaurantId) {
+        if (auth.role !== 'SUPER_ADMIN' && auth.restaurantId) {
             const menuItem = await prisma.menuItem.findUnique({
                 where: { id: menuItemId },
                 select: { restaurantId: true }

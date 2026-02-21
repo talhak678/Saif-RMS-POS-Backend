@@ -12,7 +12,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
         const tableId = searchParams.get('tableId')
 
         let restaurantId = auth.restaurantId
-        if (auth.role === 'Super Admin') {
+        if (auth.role === 'SUPER_ADMIN') {
             const queryRestId = searchParams.get('restaurantId')
             if (queryRestId) restaurantId = queryRestId
             else restaurantId = undefined
@@ -50,7 +50,7 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
         const { tableId, branchId } = validation.data
 
         // Security check: Verify branch belongs to restaurant
-        if (auth.role !== 'Super Admin' && auth.restaurantId) {
+        if (auth.role !== 'SUPER_ADMIN' && auth.restaurantId) {
             const branch = await prisma.branch.findUnique({
                 where: { id: branchId },
                 select: { restaurantId: true }

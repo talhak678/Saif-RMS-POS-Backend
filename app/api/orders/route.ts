@@ -14,7 +14,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
 
         // Multi-tenancy logic
         let restaurantId = auth.restaurantId;
-        if (auth.role === 'Super Admin') {
+        if (auth.role === 'SUPER_ADMIN') {
             const queryRestId = searchParams.get('restaurantId')
             if (queryRestId) restaurantId = queryRestId;
             else restaurantId = undefined;
@@ -70,7 +70,7 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
         } = validation.data
 
         // Security check: Verify the branchId belongs to the correct restaurant
-        if (auth.role !== 'Super Admin' && auth.restaurantId) {
+        if (auth.role !== 'SUPER_ADMIN' && auth.restaurantId) {
             const branch = await prisma.branch.findUnique({
                 where: { id: branchId },
                 select: { restaurantId: true }

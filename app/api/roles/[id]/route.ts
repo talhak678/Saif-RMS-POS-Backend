@@ -15,7 +15,7 @@ export const GET = withAuth(async (req, { params, auth }) => {
         if (!role) return errorResponse('Role not found', null, 404)
 
         // If it's a Super Admin role and the requester is not a Super Admin, hide it
-        if (role.name === 'Super Admin' && auth.role !== 'Super Admin') {
+        if (role.name === 'SUPER_ADMIN' && auth.role !== 'SUPER_ADMIN') {
             return errorResponse('Role not found', null, 404)
         }
 
@@ -39,7 +39,7 @@ export const PUT = withAuth(async (req, { params, auth }) => {
 
         // Security: Prevent modifying the Super Admin role itself
         const existing = await prisma.role.findUnique({ where: { id } })
-        if (existing?.name === 'Super Admin') {
+        if (existing?.name === 'SUPER_ADMIN') {
             return errorResponse('Cannot modify Super Admin role', null, 403)
         }
 
@@ -59,7 +59,7 @@ export const PUT = withAuth(async (req, { params, auth }) => {
         if (error.code === 'P2025') return errorResponse('Role not found', null, 404)
         return errorResponse('Failed to update role', error.message, 500)
     }
-}, { roles: ['Super Admin', 'Admin'] })
+}, { roles: ['SUPER_ADMIN', 'ADMIN'] })
 
 export const DELETE = withAuth(async (req, { params, auth }) => {
     try {
@@ -67,7 +67,7 @@ export const DELETE = withAuth(async (req, { params, auth }) => {
 
         // Security: Prevent deleting the Super Admin role
         const existing = await prisma.role.findUnique({ where: { id } })
-        if (existing?.name === 'Super Admin') {
+        if (existing?.name === 'SUPER_ADMIN') {
             return errorResponse('Cannot delete Super Admin role', null, 403)
         }
 
@@ -83,4 +83,4 @@ export const DELETE = withAuth(async (req, { params, auth }) => {
         if (error.code === 'P2025') return errorResponse('Role not found', null, 404)
         return errorResponse('Failed to delete role', error.message, 500)
     }
-}, { roles: ['Super Admin', 'Admin'] })
+}, { roles: ['SUPER_ADMIN', 'ADMIN'] })

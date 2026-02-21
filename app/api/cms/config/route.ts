@@ -11,7 +11,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
         let restaurantId = auth.restaurantId;
 
         // If Super Admin, allow fetching any restaurant's config via query param
-        if (auth.role === 'Super Admin') {
+        if (auth.role === 'SUPER_ADMIN') {
             const queryRestId = searchParams.get('restaurantId')
             if (queryRestId) restaurantId = queryRestId;
         }
@@ -44,7 +44,7 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
         const body = await req.json()
 
         // Ensure user only updates their own restaurant's config unless Super Admin
-        if (auth.role !== 'Super Admin' || !body.restaurantId) {
+        if (auth.role !== 'SUPER_ADMIN' || !body.restaurantId) {
             body.restaurantId = auth.restaurantId;
         }
 
@@ -74,4 +74,4 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
     } catch (error: any) {
         return errorResponse('Failed to update configuration', error.message, 500)
     }
-}, { roles: ['Super Admin', 'Admin'] })
+}, { roles: ['SUPER_ADMIN', 'ADMIN'] })

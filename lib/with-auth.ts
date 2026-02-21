@@ -23,7 +23,7 @@ export function withAuth(handler: AuthenticatedHandler, options: { roles?: strin
                 return errorResponse("Authentication required", null, 401);
             }
 
-            if (options.roles && !options.roles.includes(auth.role)) {
+            if (options.roles && !options.roles.some(r => r.toLowerCase() === auth.role.toLowerCase())) {
                 return errorResponse("Permission denied", null, 403);
             }
 

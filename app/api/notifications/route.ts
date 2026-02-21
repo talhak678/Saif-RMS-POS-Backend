@@ -16,7 +16,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
         let userId = auth.userId;
 
         // Super Admin can see notifications of other users
-        if (auth.role === 'Super Admin') {
+        if (auth.role === 'SUPER_ADMIN') {
             const queryUserId = searchParams.get('userId')
             if (queryUserId) userId = queryUserId;
         }
@@ -41,7 +41,7 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
             return errorResponse('Validation failed', validation.error.flatten().fieldErrors, 400)
         }
 
-        if (auth.role !== 'Super Admin') {
+        if (auth.role !== 'SUPER_ADMIN') {
             const targetUser = await prisma.user.findUnique({
                 where: { id: validation.data.userId },
                 select: { restaurantId: true }

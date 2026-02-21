@@ -12,7 +12,7 @@ export const GET = withAuth(async (req, { params, auth }) => {
         const branch = await prisma.branch.findFirst({
             where: {
                 id,
-                ...(auth.role !== 'Super Admin' && restaurantId ? { restaurantId } : {})
+                ...(auth.role !== 'SUPER_ADMIN' && restaurantId ? { restaurantId } : {})
             },
             include: { restaurant: true }
         })
@@ -34,13 +34,13 @@ export const PUT = withAuth(async (req, { params, auth }) => {
         const existing = await prisma.branch.findFirst({
             where: {
                 id,
-                ...(auth.role !== 'Super Admin' && restaurantId ? { restaurantId } : {})
+                ...(auth.role !== 'SUPER_ADMIN' && restaurantId ? { restaurantId } : {})
             }
         })
 
         if (!existing) return errorResponse('Branch not found or unauthorized', null, 404)
 
-        if (auth.role !== 'Super Admin' || !body.restaurantId) {
+        if (auth.role !== 'SUPER_ADMIN' || !body.restaurantId) {
             body.restaurantId = restaurantId;
         }
 
@@ -59,7 +59,7 @@ export const PUT = withAuth(async (req, { params, auth }) => {
     } catch (error: any) {
         return errorResponse('Failed to update branch', error.message, 500)
     }
-}, { roles: ['Super Admin', 'Admin'] })
+}, { roles: ['SUPER_ADMIN', 'ADMIN'] })
 
 export const DELETE = withAuth(async (req, { params, auth }) => {
     try {
@@ -69,7 +69,7 @@ export const DELETE = withAuth(async (req, { params, auth }) => {
         const existing = await prisma.branch.findFirst({
             where: {
                 id,
-                ...(auth.role !== 'Super Admin' && restaurantId ? { restaurantId } : {})
+                ...(auth.role !== 'SUPER_ADMIN' && restaurantId ? { restaurantId } : {})
             }
         })
 
@@ -80,4 +80,4 @@ export const DELETE = withAuth(async (req, { params, auth }) => {
     } catch (error: any) {
         return errorResponse('Failed to delete branch', error.message, 500)
     }
-}, { roles: ['Super Admin', 'Admin'] })
+}, { roles: ['SUPER_ADMIN', 'ADMIN'] })

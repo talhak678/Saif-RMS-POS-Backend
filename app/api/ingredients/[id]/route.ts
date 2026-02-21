@@ -12,7 +12,7 @@ export const GET = withAuth(async (req, { params, auth }) => {
         const ingredient = await prisma.ingredient.findFirst({
             where: {
                 id,
-                ...(auth.role !== 'Super Admin' && restaurantId ? { restaurantId } : {})
+                ...(auth.role !== 'SUPER_ADMIN' && restaurantId ? { restaurantId } : {})
             },
             include: {
                 recipes: { include: { menuItem: true } },
@@ -34,7 +34,7 @@ export const PUT = withAuth(async (req, { params, auth }) => {
         const existing = await prisma.ingredient.findFirst({
             where: {
                 id,
-                ...(auth.role !== 'Super Admin' && restaurantId ? { restaurantId } : {})
+                ...(auth.role !== 'SUPER_ADMIN' && restaurantId ? { restaurantId } : {})
             }
         })
         if (!existing) return errorResponse('Ingredient not found or unauthorized', null, 404)
@@ -63,7 +63,7 @@ export const DELETE = withAuth(async (req, { params, auth }) => {
         const existing = await prisma.ingredient.findFirst({
             where: {
                 id,
-                ...(auth.role !== 'Super Admin' && restaurantId ? { restaurantId } : {})
+                ...(auth.role !== 'SUPER_ADMIN' && restaurantId ? { restaurantId } : {})
             }
         })
         if (!existing) return errorResponse('Ingredient not found or unauthorized', null, 404)
@@ -73,4 +73,4 @@ export const DELETE = withAuth(async (req, { params, auth }) => {
     } catch (error: any) {
         return errorResponse('Failed to delete ingredient', error.message, 500)
     }
-}, { roles: ['Super Admin', 'Admin', 'Manager'] })
+}, { roles: ['SUPER_ADMIN', 'ADMIN', 'Manager'] })

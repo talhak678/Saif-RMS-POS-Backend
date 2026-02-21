@@ -26,7 +26,7 @@ export const PUT = withAuth(async (req: NextRequest, { params, auth }: { params:
         const existing = await prisma.blogPost.findUnique({ where: { id } })
         if (!existing) return errorResponse('Blog post not found', null, 404)
 
-        if (auth.role !== 'Super Admin' && existing.restaurantId !== auth.restaurantId) {
+        if (auth.role !== 'SUPER_ADMIN' && existing.restaurantId !== auth.restaurantId) {
             return errorResponse('Unauthorized', null, 403)
         }
 
@@ -47,7 +47,7 @@ export const PUT = withAuth(async (req: NextRequest, { params, auth }: { params:
     } catch (error: any) {
         return errorResponse('Failed to update blog post', error.message, 500)
     }
-}, { roles: ['Super Admin', 'Admin'] })
+}, { roles: ['SUPER_ADMIN', 'ADMIN'] })
 
 export const DELETE = withAuth(async (req: NextRequest, { params, auth }: { params: Promise<{ id: string }>, auth: any }) => {
     try {
@@ -55,7 +55,7 @@ export const DELETE = withAuth(async (req: NextRequest, { params, auth }: { para
         const existing = await prisma.blogPost.findUnique({ where: { id } })
         if (!existing) return errorResponse('Blog post not found', null, 404)
 
-        if (auth.role !== 'Super Admin' && existing.restaurantId !== auth.restaurantId) {
+        if (auth.role !== 'SUPER_ADMIN' && existing.restaurantId !== auth.restaurantId) {
             return errorResponse('Unauthorized', null, 403)
         }
 
@@ -64,4 +64,4 @@ export const DELETE = withAuth(async (req: NextRequest, { params, auth }: { para
     } catch (error: any) {
         return errorResponse('Failed to delete blog post', error.message, 500)
     }
-}, { roles: ['Super Admin', 'Admin'] })
+}, { roles: ['SUPER_ADMIN', 'ADMIN'] })

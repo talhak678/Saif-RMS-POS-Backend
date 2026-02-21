@@ -12,7 +12,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
 
         let restaurantId = auth.restaurantId;
 
-        if (auth.role === 'Super Admin') {
+        if (auth.role === 'SUPER_ADMIN') {
             const queryRestId = searchParams.get('restaurantId')
             if (queryRestId) restaurantId = queryRestId;
             else restaurantId = undefined; // Super Admin sees all if no ID provided
@@ -35,7 +35,7 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
         const body = await req.json()
 
         // Inject restaurantId from auth context if not Super Admin
-        if (auth.role !== 'Super Admin' || !body.restaurantId) {
+        if (auth.role !== 'SUPER_ADMIN' || !body.restaurantId) {
             body.restaurantId = auth.restaurantId;
         }
 
