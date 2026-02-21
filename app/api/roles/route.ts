@@ -50,4 +50,4 @@ export const POST = withAuth(async (req: NextRequest) => {
         if (error.code === 'P2002') return errorResponse('Role name already exists')
         return errorResponse('Failed to create role', error.message, 500)
     }
-}, { roles: ['SUPER_ADMIN', 'ADMIN', 'Manager'] }) // Super Admin and Admin can manage roles
+}, { roles: ['SUPER_ADMIN', 'ADMIN', 'Manager','Merchant Admin'] }) // Super Admin and Admin can manage roles
