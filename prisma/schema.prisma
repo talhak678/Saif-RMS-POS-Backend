@@ -80,6 +80,7 @@ model Restaurant {
   promos        PromoBanner[]
   blogPosts     BlogPost[]
   websiteConfig WebsiteConfig?
+  subscriptionPrices SubscriptionPrice[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -558,4 +559,23 @@ enum TableStatus {
   AVAILABLE
   OCCUPIED
   RESERVED
+}
+
+// ---------------------------------------------------------
+// 13. Subscription Pricing
+// ---------------------------------------------------------
+
+model SubscriptionPrice {
+  id           String      @id @default(cuid())
+  plan         SubType     // FREE, BASIC, PREMIUM, ENTERPRISE
+  price        Decimal     @db.Decimal(10, 2)
+  billingCycle String      @default("MONTHLY") @map("billing_cycle") // e.g., "MONTHLY", "YEARLY"
+  isActive     Boolean     @default(true) @map("is_active")
+  restaurantId String      @map("restaurant_id")
+  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id])
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  @@unique([restaurantId, plan, billingCycle])
+  @@map("subscription_prices")
 }
