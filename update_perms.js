@@ -23,7 +23,7 @@ async function main() {
     // Connect to SUPER_ADMIN and ADMIN roles
     const roles = await prisma.role.findMany({
         where: {
-            name: { in: ['SUPER_ADMIN', 'ADMIN'] }
+            name: { in: ['SUPER_ADMIN', 'ADMIN','Merchant Admin','Manager'] }
         }
     });
 

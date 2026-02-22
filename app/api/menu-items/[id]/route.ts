@@ -72,7 +72,7 @@ export const PUT = withAuth(async (req, { params, auth }) => {
     } catch (error: any) {
         return errorResponse('Failed to update menu item', error.message, 500)
     }
-}, { roles: ['SUPER_ADMIN', 'ADMIN'] })
+}, { roles: ['SUPER_ADMIN', 'ADMIN','Merchant Admin','Manager'] })
 
 export const DELETE = withAuth(async (req, { params, auth }) => {
     try {
@@ -92,4 +92,4 @@ export const DELETE = withAuth(async (req, { params, auth }) => {
     } catch (error: any) {
         return errorResponse('Failed to delete menu item', error.message, 500)
     }
-}, { roles: ['SUPER_ADMIN', 'ADMIN'] })
+}, { roles: ['SUPER_ADMIN', 'ADMIN','Merchant Admin','Manager'] })

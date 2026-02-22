@@ -47,7 +47,7 @@ export const PUT = withAuth(async (req: NextRequest, { params, auth }: { params:
     } catch (error: any) {
         return errorResponse('Failed to update blog post', error.message, 500)
     }
-}, { roles: ['SUPER_ADMIN', 'ADMIN'] })
+}, { roles: ['SUPER_ADMIN', 'ADMIN','Merchant Admin','Manager'] })
 
 export const DELETE = withAuth(async (req: NextRequest, { params, auth }: { params: Promise<{ id: string }>, auth: any }) => {
     try {
@@ -64,4 +64,4 @@ export const DELETE = withAuth(async (req: NextRequest, { params, auth }: { para
     } catch (error: any) {
         return errorResponse('Failed to delete blog post', error.message, 500)
     }
-}, { roles: ['SUPER_ADMIN', 'ADMIN'] })
+}, { roles: ['SUPER_ADMIN', 'ADMIN','Merchant Admin','Manager'] })

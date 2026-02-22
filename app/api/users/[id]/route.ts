@@ -80,7 +80,7 @@ export const PUT = withAuth(async (req, { params, auth }) => {
         if (error.code === 'P2002') return errorResponse('Email already exists')
         return errorResponse('Failed to update user', error.message, 500)
     }
-}, { roles: ['SUPER_ADMIN', 'ADMIN'] })
+}, { roles: ['SUPER_ADMIN', 'ADMIN','Merchant Admin','Manager'] })
 
 export const DELETE = withAuth(async (req, { params, auth }) => {
     try {
@@ -100,4 +100,4 @@ export const DELETE = withAuth(async (req, { params, auth }) => {
     } catch (error: any) {
         return errorResponse('Failed to delete user', error.message, 500)
     }
-}, { roles: ['SUPER_ADMIN', 'ADMIN'] })
+}, { roles: ['SUPER_ADMIN', 'ADMIN','Merchant Admin','Manager'] })

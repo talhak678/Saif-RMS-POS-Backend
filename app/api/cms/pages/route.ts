@@ -45,4 +45,4 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
         if (error.code === 'P2002') return errorResponse('Slug already exists for this restaurant')
         return errorResponse('Failed to create page', error.message, 500)
     }
-}, { roles: ['SUPER_ADMIN', 'ADMIN'] })
+}, { roles: ['SUPER_ADMIN', 'ADMIN','Merchant Admin','Manager'] })

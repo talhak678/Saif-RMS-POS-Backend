@@ -63,4 +63,4 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
     } catch (error: any) {
         return errorResponse('Failed to save setting', error.message, 500)
     }
-}, { roles: ['SUPER_ADMIN', 'ADMIN'] })
+}, { roles: ['SUPER_ADMIN', 'ADMIN','Merchant Admin','Manager'] })
