@@ -23,12 +23,13 @@ This comprehensive documentation covers all 45+ API endpoints for the Restaurant
 11. [Payment Management](#10-payment-management)
 12. [Reservations](#11-reservations)
 13. [Table Services](#12-table-services)
-14. [CMS & Content](#13-cms--content)
-15. [Marketing](#14-marketing)
-16. [Delivery & Riders](#15-delivery--riders)
-17. [Notifications](#16-notifications)
-18. [Dashboard Analytics](#17-dashboard-analytics)
-19. [Enums & Constants](#enums--constants)
+14. [Subscription Pricing](#13-subscription-pricing)
+15. [CMS & Content](#14-cms--content)
+16. [Marketing](#15-marketing)
+17. [Delivery & Riders](#16-delivery--riders)
+18. [Notifications](#17-notifications)
+19. [Dashboard Analytics](#18-dashboard-analytics)
+20. [Enums & Constants](#enums--constants)
 
 ---
 
@@ -1131,7 +1132,67 @@ Delete a table.
 
 ---
 
-## 12. CMS & Content
+## 13. Subscription Pricing
+
+### GET `/api/subscription-prices`
+Fetch all subscription prices. Super Admins see all, Restaurant Admins see their own.
+
+**Query Parameters:**
+- `restaurantId` (optional) - Filter by restaurant (Super Admin only)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "clxxx...",
+      "plan": "PREMIUM",
+      "price": 49.99,
+      "billingCycle": "MONTHLY",
+      "isActive": true,
+      "restaurantId": "clxxx...",
+      "restaurant": { "name": "Pizza House", "slug": "pizza-house" },
+      "createdAt": "2026-02-22T00:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### POST `/api/subscription-prices`
+Create a new subscription price entry.
+
+**Request Body:**
+```json
+{
+  "plan": "PREMIUM",
+  "price": 49.99,
+  "billingCycle": "MONTHLY",
+  "restaurantId": "clxxx...",
+  "isActive": true
+}
+```
+
+---
+
+### GET `/api/subscription-prices/[id]`
+Get details of a specific pricing entry.
+
+---
+
+### PUT `/api/subscription-prices/[id]`
+Update a pricing entry.
+
+---
+
+### DELETE `/api/subscription-prices/[id]`
+Delete a pricing entry.
+
+---
+
+## 14. CMS & Content
 
 ### GET `/api/cms/faq`
 Get FAQ items.

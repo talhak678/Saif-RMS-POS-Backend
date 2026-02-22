@@ -74,4 +74,4 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
         if (error.code === 'P2002') return errorResponse('Email already exists')
         return errorResponse('Failed to create user', error.message, 500)
     }
-}, { roles: ['SUPER_ADMIN', 'ADMIN'] }) // Only Admins can manage users
+}, { roles: ['SUPER_ADMIN', 'ADMIN','Merchant Admin','Manager'] }) // Only Admins can manage users
