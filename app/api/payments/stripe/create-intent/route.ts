@@ -44,12 +44,12 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
             update: {
                 transactionId: paymentIntent.id,
                 status: "PENDING",
-                method: "CARD"
+                method: "STRIPE"
             },
             create: {
                 orderId: orderId,
                 amount: Number(amount),
-                method: "CARD",
+                method: "STRIPE",
                 status: "PENDING",
                 transactionId: paymentIntent.id
             }
