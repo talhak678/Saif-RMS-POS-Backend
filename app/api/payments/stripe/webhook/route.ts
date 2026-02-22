@@ -7,21 +7,24 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 export async function POST(req: NextRequest) {
+    console.log("📥 Incoming Webhook Request...");
     const body = await req.text();
     const sig = req.headers.get("stripe-signature");
+
+    console.log("📜 Signature:", sig ? "Found" : "Missing");
+    console.log("🔑 Secret:", endpointSecret ? "Configured" : "Missing");
 
     let event: Stripe.Event;
 
     try {
         if (!sig || !endpointSecret) {
-            // If no secret, we might be testing locally without webhook CLI
-            // For production, ALWAYS require secret
+            console.log("⚠️ Bypassing signature check for local testing");
             event = JSON.parse(body);
         } else {
             event = stripe.webhooks.constructEvent(body, sig, endpointSecret);
         }
     } catch (err: any) {
-        console.error(`Webhook Signature Error: ${err.message}`);
+        console.error(`❌ Webhook Error: ${err.message}`);
         return new Response(`Webhook Error: ${err.message}`, { status: 400 });
     }
 
