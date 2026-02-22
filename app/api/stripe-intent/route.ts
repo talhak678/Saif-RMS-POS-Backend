@@ -4,7 +4,10 @@ import { withAuth } from "@/lib/with-auth";
 import Stripe from "stripe";
 import prisma from "@/lib/prisma";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+const stripe = new Stripe(stripeSecretKey || "", {
+    apiVersion: "2024-06-20" as any,
+});
 
 export const POST = withAuth(async (req: NextRequest, { auth }) => {
     try {
