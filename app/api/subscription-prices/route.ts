@@ -10,13 +10,13 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
         const restaurantId = searchParams.get('restaurantId')
 
         // If not super admin, they can only see their own restaurant's pricing
-        if (auth.role !== 'Super Admin' && auth.restaurantId) {
+        if (auth.role !== 'SUPER_ADMIN' && auth.restaurantId) {
             if (restaurantId && restaurantId !== auth.restaurantId) {
                 return errorResponse('Unauthorized to view other restaurant pricing', null, 403)
             }
         }
 
-        const effectiveRestaurantId = auth.role === 'Super Admin' ? restaurantId : auth.restaurantId
+        const effectiveRestaurantId = auth.role === 'SUPER_ADMIN' ? restaurantId : auth.restaurantId
 
         const prices = await (prisma as any).subscriptionPrice.findMany({
             where: {
@@ -48,7 +48,7 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
         const { restaurantId, plan, price, billingCycle, isActive } = validation.data
 
         // Only Super Admin can create pricing for any restaurant
-        if (auth.role !== 'Super Admin' && auth.restaurantId !== restaurantId) {
+        if (auth.role !== 'SUPER_ADMIN' && auth.restaurantId !== restaurantId) {
             return errorResponse('Unauthorized to create pricing for this restaurant', null, 403)
         }
 

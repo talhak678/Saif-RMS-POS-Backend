@@ -19,7 +19,7 @@ export const GET = withAuth(async (req: NextRequest, { params, auth }) => {
         if (!price) return errorResponse('Subscription price not found', null, 404)
 
         // Security check
-        if (auth.role !== 'Super Admin' && auth.restaurantId !== price.restaurantId) {
+        if (auth.role !== 'SUPER_ADMIN') {
             return errorResponse('Unauthorized to view this pricing', null, 403)
         }
 
@@ -43,7 +43,7 @@ export const PUT = withAuth(async (req: NextRequest, { params, auth }) => {
         if (!existing) return errorResponse('Subscription price not found', null, 404)
 
         // Security check
-        if (auth.role !== 'Super Admin' && auth.restaurantId !== existing.restaurantId) {
+        if (auth.role !== 'SUPER_ADMIN') {
             return errorResponse('Unauthorized to update this pricing', null, 403)
         }
 
@@ -73,7 +73,7 @@ export const DELETE = withAuth(async (req: NextRequest, { params, auth }) => {
         if (!existing) return errorResponse('Subscription price not found', null, 404)
 
         // Security check
-        if (auth.role !== 'Super Admin' && auth.restaurantId !== existing.restaurantId) {
+        if (auth.role !== 'SUPER_ADMIN') {
             return errorResponse('Unauthorized to delete this pricing', null, 403)
         }
 
