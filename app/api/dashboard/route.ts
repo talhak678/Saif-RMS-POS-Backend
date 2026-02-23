@@ -51,13 +51,22 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
         const prevWhere: any = { createdAt: { gte: prevStart, lte: prevEnd }, ...tenantFilter }
 
         // ── 1. Current period revenue (paid orders) ──────────────────────────
-        const [revenueData, prevRevenueData] = await Promise.all([
+        const [revenueData, prevRevenueData, salesData, prevSalesData] = await Promise.all([
             prisma.order.aggregate({
                 where: { ...baseWhere, payment: { status: PaymentStatus.PAID } },
                 _sum: { total: true },
             }),
             prisma.order.aggregate({
                 where: { ...prevWhere, payment: { status: PaymentStatus.PAID } },
+                _sum: { total: true },
+            }),
+            // Total Sales = ALL orders (paid + unpaid + pending)
+            prisma.order.aggregate({
+                where: baseWhere,
+                _sum: { total: true },
+            }),
+            prisma.order.aggregate({
+                where: prevWhere,
                 _sum: { total: true },
             }),
         ])
@@ -220,13 +229,15 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
 
         const dashboardData = {
             period,
-            totalRevenue: revenueData._sum.total || 0,
+            totalSales: salesData._sum.total || 0,        // ALL orders (any status)
+            totalRevenue: revenueData._sum.total || 0,     // Paid orders only
             totalOrders,
             websiteOrders,
             avgOrderValue: avgData._avg.total || 0,
             newCustomers,
             totalCustomers,
             growth: {
+                totalSales: growth(Number(salesData._sum.total || 0), Number(prevSalesData._sum.total || 0)),
                 revenue: growth(Number(revenueData._sum.total || 0), Number(prevRevenueData._sum.total || 0)),
                 orders: growth(totalOrders, prevTotalOrders),
                 websiteOrders: growth(websiteOrders, prevWebsiteOrders),
