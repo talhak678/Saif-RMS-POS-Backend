@@ -17,7 +17,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
             else restaurantId = undefined;
         }
 
-        // Basic date filtering (last 30 days by default)
+        // Date range — last 30 days by default
         const thirtyDaysAgo = new Date()
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
@@ -27,7 +27,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
             ...(restaurantId ? { branch: { restaurantId } } : {}),
         }
 
-        // 1. Total Revenue
+        // 1. Total Revenue (paid orders only)
         const revenueData = await prisma.order.aggregate({
             where: {
                 ...baseWhere,
@@ -37,27 +37,39 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
         })
 
         // 2. Total Orders
-        const totalOrders = await prisma.order.count({
-            where: baseWhere,
+        const totalOrders = await prisma.order.count({ where: baseWhere })
+
+        // 3. Total Website Orders
+        const websiteOrders = await prisma.order.count({
+            where: { ...baseWhere, source: 'WEBSITE' },
         })
 
-        // 3. Order Status Breakdown
-        const statusBreakdown = await prisma.order.groupBy({
+        // 4. Avg Order Value
+        const avgData = await prisma.order.aggregate({
+            where: baseWhere,
+            _avg: { total: true },
+        })
+
+        // 5. Order Status Breakdown
+        const statusGrouped = await prisma.order.groupBy({
             by: ['status'],
             where: baseWhere,
             _count: { id: true },
         })
 
-        // 4. Top Selling Items
+        // 6. Orders by Source (platform)
+        const sourceGrouped = await prisma.order.groupBy({
+            by: ['source'],
+            where: baseWhere,
+            _count: { id: true },
+        })
+
+        // 7. Top Selling Items
         const topItems = await prisma.orderItem.groupBy({
             by: ['menuItemId'],
-            where: {
-                order: baseWhere,
-            },
+            where: { order: baseWhere },
             _sum: { quantity: true },
-            orderBy: {
-                _sum: { quantity: 'desc' },
-            },
+            orderBy: { _sum: { quantity: 'desc' } },
             take: 5,
         })
 
@@ -74,23 +86,93 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
             })
         )
 
-        // 5. New Customers (Filtered by restaurant)
+        // 8. New Customers
         const newCustomers = await prisma.customer.count({
             where: {
                 createdAt: { gte: thirtyDaysAgo },
-                ...(restaurantId ? { restaurantId } : {})
+                ...(restaurantId ? { restaurantId } : {}),
+            },
+        })
+
+        // 9. Total Customers
+        const totalCustomers = await prisma.customer.count({
+            where: {
+                ...(restaurantId ? { restaurantId } : {}),
+            },
+        })
+
+        // 10. Monthly Revenue for chart (last 12 months)
+        const twelveMonthsAgo = new Date()
+        twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11)
+        twelveMonthsAgo.setDate(1)
+        twelveMonthsAgo.setHours(0, 0, 0, 0)
+
+        const monthlyOrders = await prisma.order.findMany({
+            where: {
+                ...(branchId ? { branchId } : {}),
+                ...(restaurantId ? { branch: { restaurantId } } : {}),
+                createdAt: { gte: twelveMonthsAgo },
+                payment: { status: PaymentStatus.PAID },
+            },
+            select: { total: true, createdAt: true },
+        })
+
+        // Group by month
+        const monthlyMap: Record<string, number> = {}
+        monthlyOrders.forEach((o) => {
+            const key = `${o.createdAt.getFullYear()}-${String(o.createdAt.getMonth() + 1).padStart(2, '0')}`
+            monthlyMap[key] = (monthlyMap[key] || 0) + Number(o.total)
+        })
+
+        const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        const monthlySales = Array.from({ length: 12 }, (_, i) => {
+            const d = new Date(twelveMonthsAgo)
+            d.setMonth(d.getMonth() + i)
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+            return {
+                month: monthLabels[d.getMonth()],
+                revenue: monthlyMap[key] || 0,
+            }
+        })
+
+        // 11. Recent Reviews
+        const recentReviews = await prisma.review.findMany({
+            where: {
+                order: {
+                    ...(restaurantId ? { branch: { restaurantId } } : {}),
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 5,
+            include: {
+                order: { include: { customer: { select: { name: true } } } },
             },
         })
 
         const dashboardData = {
             totalRevenue: revenueData._sum.total || 0,
             totalOrders,
+            websiteOrders,
+            avgOrderValue: avgData._avg.total || 0,
             newCustomers,
-            statusBreakdown: statusBreakdown.reduce((acc: any, curr) => {
+            totalCustomers,
+            statusBreakdown: statusGrouped.reduce((acc: any, curr) => {
                 acc[curr.status] = curr._count.id
                 return acc
             }, {}),
+            sourceBreakdown: sourceGrouped.reduce((acc: any, curr) => {
+                acc[curr.source] = curr._count.id
+                return acc
+            }, {}),
             topItems: topItemsWithNames,
+            monthlySales,
+            recentReviews: recentReviews.map((r) => ({
+                id: r.id,
+                rating: r.rating,
+                comment: r.comment,
+                customerName: r.order?.customer?.name || 'Guest',
+                createdAt: r.createdAt,
+            })),
         }
 
         return successResponse(dashboardData)
