@@ -20,11 +20,24 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
                 ...(restaurantId ? { restaurantId } : {})
             },
             include: {
-                _count: { select: { orders: true } }
+                _count: { select: { orders: true } },
+                orders: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 1,
+                    select: { createdAt: true }
+                }
             },
             orderBy: { createdAt: 'desc' },
         })
-        return successResponse(customers)
+
+        // Flatten lastOrderAt to top-level for easy frontend use
+        const result = customers.map(c => ({
+            ...c,
+            lastOrderAt: c.orders[0]?.createdAt ?? null,
+            orders: undefined, // don't send full order objects
+        }))
+
+        return successResponse(result)
     } catch (error: any) {
         return errorResponse('Failed to fetch customers', error.message, 500)
     }

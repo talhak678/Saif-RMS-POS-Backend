@@ -69,6 +69,23 @@ model Restaurant {
   branches      Branch[]
   settings      Setting[]
   users         User[]
+
+  // New informative fields
+  contactName      String? @map("contact_name")
+  contactPhone     String? @map("contact_phone")
+  contactEmail     String? @map("contact_email")
+  notificationEmail String? @map("notification_email")
+  address          String?
+  city             String?
+  postCode         String? @map("post_code")
+  state            String?
+  country          String? @default("Pakistan")
+  countryCode      String? @default("PK") @map("country_code")
+  cuisines         String[] // e.g., ["Bakery", "Fast Food"]
+  serviceType      String?  @default("BOTH") @map("service_type") // DELIVERY, PICKUP, BOTH
+  lat              Float?
+  lng              Float?
+
   categories    Category[]
   menuItems     MenuItem[]
   ingredients   Ingredient[]
