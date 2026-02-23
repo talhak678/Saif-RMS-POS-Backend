@@ -11,6 +11,8 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
         const branchId = searchParams.get('branchId')
         const status = searchParams.get('status') as OrderStatus | null
         const customerId = searchParams.get('customerId')
+        const startDate = searchParams.get('startDate')
+        const endDate = searchParams.get('endDate')
 
         // Multi-tenancy logic
         let restaurantId = auth.restaurantId;
@@ -26,6 +28,12 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
                     branchId ? { branchId } : {},
                     status ? { status } : {},
                     customerId ? { customerId } : {},
+                    startDate || endDate ? {
+                        createdAt: {
+                            ...(startDate ? { gte: new Date(new Date(startDate).setHours(0, 0, 0, 0)) } : {}),
+                            ...(endDate ? { lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)) } : {}),
+                        }
+                    } : {},
                     // Ensure the branch belongs to the user's restaurant
                     restaurantId ? { branch: { restaurantId } } : {}
                 ]

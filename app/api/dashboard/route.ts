@@ -17,12 +17,26 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
             else restaurantId = undefined;
         }
 
-        // Basic date filtering (last 30 days by default)
-        const thirtyDaysAgo = new Date()
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+        // Date filtering
+        const startDateParam = searchParams.get('startDate')
+        const endDateParam = searchParams.get('endDate')
+
+        let startDate: Date;
+        let endDate: Date;
+
+        if (startDateParam && endDateParam) {
+            startDate = new Date(startDateParam);
+            startDate.setHours(0, 0, 0, 0);
+            endDate = new Date(endDateParam);
+            endDate.setHours(23, 59, 59, 999);
+        } else {
+            endDate = new Date();
+            startDate = new Date(endDate.getTime() - (30 * 24 * 60 * 60 * 1000));
+            startDate.setHours(0, 0, 0, 0);
+        }
 
         const baseWhere: any = {
-            createdAt: { gte: thirtyDaysAgo },
+            createdAt: { gte: startDate, lte: endDate },
             ...(branchId ? { branchId } : {}),
             ...(restaurantId ? { branch: { restaurantId } } : {}),
         }
@@ -77,7 +91,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
         // 5. New Customers (Filtered by restaurant)
         const newCustomers = await prisma.customer.count({
             where: {
-                createdAt: { gte: thirtyDaysAgo },
+                createdAt: { gte: startDate, lte: endDate },
                 ...(restaurantId ? { restaurantId } : {})
             },
         })

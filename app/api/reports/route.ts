@@ -20,9 +20,26 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
         }
 
         // --- 1. Define Time Ranges ---
-        const now = new Date();
-        const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
-        const sixtyDaysAgo = new Date(now.getTime() - (60 * 24 * 60 * 60 * 1000));
+        const startDateParam = searchParams.get('startDate');
+        const endDateParam = searchParams.get('endDate');
+
+        let startDate: Date;
+        let endDate: Date;
+
+        if (startDateParam && endDateParam) {
+            startDate = new Date(startDateParam);
+            startDate.setHours(0, 0, 0, 0);
+            endDate = new Date(endDateParam);
+            endDate.setHours(23, 59, 59, 999);
+        } else {
+            endDate = new Date();
+            startDate = new Date(endDate.getTime() - (30 * 24 * 60 * 60 * 1000));
+            startDate.setHours(0, 0, 0, 0);
+        }
+
+        const duration = endDate.getTime() - startDate.getTime();
+        const prevStartDate = new Date(startDate.getTime() - duration);
+        const prevEndDate = new Date(startDate.getTime() - 1); // 1ms before start of current period
 
         const baseWhere: any = {
             ...(branchId ? { branchId } : {}),
@@ -32,35 +49,39 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
         // --- 2. Fetch Current & Previous Period Sales Data ---
         const [currentPeriodSales, previousPeriodSales] = await Promise.all([
             prisma.order.findMany({
-                where: { ...baseWhere, createdAt: { gte: thirtyDaysAgo }, payment: { status: PaymentStatus.PAID } },
+                where: { ...baseWhere, createdAt: { gte: startDate, lte: endDate }, payment: { status: PaymentStatus.PAID } },
                 select: { total: true, createdAt: true, customerId: true, orderNo: true }
             }),
             prisma.order.findMany({
-                where: { ...baseWhere, createdAt: { gte: sixtyDaysAgo, lt: thirtyDaysAgo }, payment: { status: PaymentStatus.PAID } },
+                where: { ...baseWhere, createdAt: { gte: prevStartDate, lte: prevEndDate }, payment: { status: PaymentStatus.PAID } },
                 select: { total: true }
             })
         ]);
 
         // --- 3. Analytics: Sales Trend ---
         const dailyTrend: Record<string, { date: string, sales: number, orders: number }> = {};
-        for (let i = 29; i >= 0; i--) {
-            const d = new Date(now.getTime() - (i * 24 * 60 * 60 * 1000));
+        const daysDiff = Math.ceil(duration / (24 * 60 * 60 * 1000));
+        
+        for (let i = daysDiff - 1; i >= 0; i--) {
+            const d = new Date(endDate.getTime() - (i * 24 * 60 * 60 * 1000));
             const key = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
             dailyTrend[key] = { date: key, sales: 0, orders: 0 };
         }
 
-        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         const monthlyTrend: Record<string, { date: string, sales: number, orders: number }> = {};
-        for (let i = 5; i >= 0; i--) {
-            const d = new Date();
-            d.setMonth(d.getMonth() - i);
+        const monthsCount = (endDate.getFullYear() - startDate.getFullYear()) * 12 + (endDate.getMonth() - startDate.getMonth()) + 1;
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        
+        for (let i = monthsCount - 1; i >= 0; i--) {
+            const d = new Date(startDate.getFullYear(), startDate.getMonth() + (monthsCount - 1 - i), 1);
             const key = monthNames[d.getMonth()];
             monthlyTrend[key] = { date: key, sales: 0, orders: 0 };
         }
 
         const weeklyTrend: Record<string, { date: string, sales: number, orders: number }> = {};
-        for (let i = 11; i >= 0; i--) {
-            const key = `Week ${12 - i}`;
+        const weeksCount = Math.ceil(daysDiff / 7);
+        for (let i = 0; i < weeksCount; i++) {
+            const key = `Week ${i + 1}`;
             weeklyTrend[key] = { date: key, sales: 0, orders: 0 };
         }
 
@@ -76,9 +97,9 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
                 monthlyTrend[monthlyKey].sales += Number(order.total);
                 monthlyTrend[monthlyKey].orders += 1;
             }
-            const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-            const weekIdx = 12 - Math.floor(diffDays / 7);
-            const weeklyKey = `Week ${weekIdx}`;
+            const diffDays = Math.floor((endDate.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+            const weekIdx = Math.floor(diffDays / 7) + 1;
+            const weeklyKey = `Week ${weeksCount - weekIdx + 1}`;
             if (weeklyTrend[weeklyKey]) {
                 weeklyTrend[weeklyKey].sales += Number(order.total);
                 weeklyTrend[weeklyKey].orders += 1;
@@ -113,7 +134,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
 
         // --- 6. Inventory: Theoretical Stock Consumption (Truly Dynamic) ---
         const stockUsage = await prisma.orderItem.findMany({
-            where: { order: { ...baseWhere, createdAt: { gte: thirtyDaysAgo }, payment: { status: PaymentStatus.PAID } } },
+            where: { order: { ...baseWhere, createdAt: { gte: startDate, lte: endDate }, payment: { status: PaymentStatus.PAID } } },
             include: {
                 menuItem: {
                     include: { recipes: { include: { ingredient: true } } }
@@ -137,20 +158,20 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
             where: { restaurantId },
             include: {
                 orders: {
-                    where: { payment: { status: PaymentStatus.PAID }, createdAt: { gte: sixtyDaysAgo } },
+                    where: { payment: { status: PaymentStatus.PAID }, createdAt: { gte: prevStartDate, lte: endDate } },
                     select: { total: true, createdAt: true }
                 }
             }
         });
 
         const salesPerBranch = branches.map(b => {
-            const curr = b.orders.filter(o => o.createdAt >= thirtyDaysAgo).reduce((s, o) => s + Number(o.total), 0);
-            const prev = b.orders.filter(o => o.createdAt < thirtyDaysAgo).reduce((s, o) => s + Number(o.total), 0);
+            const curr = b.orders.filter(o => o.createdAt >= startDate && o.createdAt <= endDate).reduce((s, o) => s + Number(o.total), 0);
+            const prev = b.orders.filter(o => o.createdAt >= prevStartDate && o.createdAt <= prevEndDate).reduce((s, o) => s + Number(o.total), 0);
             const growth = prev > 0 ? Math.round(((curr - prev) / prev) * 100) : 100;
             return {
                 branch: b.name,
                 sales: curr,
-                orders: b.orders.filter(o => o.createdAt >= thirtyDaysAgo).length,
+                orders: b.orders.filter(o => o.createdAt >= startDate && o.createdAt <= endDate).length,
                 growth
             }
         });
@@ -162,7 +183,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
                 menuItems: {
                     include: {
                         orderItems: {
-                            where: { order: { payment: { status: PaymentStatus.PAID }, createdAt: { gte: thirtyDaysAgo } } }
+                            where: { order: { payment: { status: PaymentStatus.PAID }, createdAt: { gte: startDate, lte: endDate } } }
                         }
                     }
                 }
@@ -186,7 +207,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
         // Top Selling Items
         const topSellingItemsData = await prisma.orderItem.groupBy({
             by: ['menuItemId'],
-            where: { order: { ...baseWhere, payment: { status: PaymentStatus.PAID }, createdAt: { gte: thirtyDaysAgo } } },
+            where: { order: { ...baseWhere, payment: { status: PaymentStatus.PAID }, createdAt: { gte: startDate, lte: endDate } } },
             _sum: { quantity: true, price: true },
             orderBy: { _sum: { quantity: 'desc' } },
             take: 10
@@ -203,7 +224,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
 
         // Locations Extraction
         const ordersWithAddress = await prisma.order.findMany({
-            where: { ...baseWhere, createdAt: { gte: thirtyDaysAgo }, deliveryAddress: { not: null } },
+            where: { ...baseWhere, createdAt: { gte: startDate, lte: endDate }, deliveryAddress: { not: null } },
             select: { deliveryAddress: true }
         });
         const locationsMap: Record<string, number> = {};
@@ -222,7 +243,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
         // Order Source Distribution
         const orderSources = await prisma.order.groupBy({
             by: ['source'],
-            where: { ...baseWhere, createdAt: { gte: thirtyDaysAgo }, payment: { status: PaymentStatus.PAID } },
+            where: { ...baseWhere, createdAt: { gte: startDate, lte: endDate }, payment: { status: PaymentStatus.PAID } },
             _count: { id: true }
         });
         const orderSource = orderSources.map((s, idx) => ({
