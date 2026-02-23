@@ -40,9 +40,12 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
             else restaurantId = undefined;
         }
 
-        const { start, end, prevStart, prevEnd } = getPeriodDates(period)
+        // Basic date filtering (last 30 days by default)
+        const thirtyDaysAgo = new Date()
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-        const tenantFilter: any = {
+        const baseWhere: any = {
+            createdAt: { gte: thirtyDaysAgo },
             ...(branchId ? { branchId } : {}),
             ...(restaurantId ? { branch: { restaurantId } } : {}),
         }
@@ -149,83 +152,10 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
 
         const monthlyOrders = await prisma.order.findMany({
             where: {
-                ...tenantFilter,
-                createdAt: { gte: twelveMonthsAgo },
-                payment: { status: PaymentStatus.PAID },
-            },
-            select: { total: true, createdAt: true },
-        })
-
-        const monthlyMap: Record<string, number> = {}
-        const monthlyCountMap: Record<string, number> = {}
-        monthlyOrders.forEach((o) => {
-            const key = `${o.createdAt.getFullYear()}-${String(o.createdAt.getMonth() + 1).padStart(2, '0')}`
-            monthlyMap[key] = (monthlyMap[key] || 0) + Number(o.total)
-            monthlyCountMap[key] = (monthlyCountMap[key] || 0) + 1
-        })
-
-        const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-        const monthlySales = Array.from({ length: 12 }, (_, i) => {
-            const d = new Date(twelveMonthsAgo)
-            d.setMonth(d.getMonth() + i)
-            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-            return {
-                month: monthLabels[d.getMonth()],
-                revenue: monthlyMap[key] || 0,
-                orders: monthlyCountMap[key] || 0,
-            }
-        })
-
-        // ── 11. Hourly Orders (today) ─────────────────────────────────────────
-        const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
-        const todayOrders = await prisma.order.findMany({
-            where: { ...tenantFilter, createdAt: { gte: todayStart } },
-            select: { createdAt: true },
-        })
-
-        const hourlyMap: number[] = Array(24).fill(0)
-        todayOrders.forEach((o) => { hourlyMap[o.createdAt.getHours()]++ })
-        const hourlyOrders = hourlyMap.map((count, h) => ({ hour: `${h}:00`, count }))
-
-        // ── 12. Category Revenue ──────────────────────────────────────────────
-        const categoryRevRaw = await prisma.orderItem.groupBy({
-            by: ['menuItemId'],
-            where: { order: baseWhere },
-            _sum: { quantity: true, price: true },
-        })
-
-        const categoryMap: Record<string, { revenue: number; quantity: number }> = {}
-        await Promise.all(
-            categoryRevRaw.map(async (item) => {
-                const mi = await prisma.menuItem.findUnique({
-                    where: { id: item.menuItemId },
-                    select: { category: { select: { name: true } } },
-                })
-                const catName = mi?.category?.name || 'Unknown'
-                if (!categoryMap[catName]) categoryMap[catName] = { revenue: 0, quantity: 0 }
-                categoryMap[catName].revenue += Number(item._sum.price || 0)
-                categoryMap[catName].quantity += Number(item._sum.quantity || 0)
-            })
-        )
-
-        const categoryRevenue = Object.entries(categoryMap)
-            .map(([name, v]) => ({ name, revenue: Math.round(v.revenue), quantity: v.quantity }))
-            .sort((a, b) => b.revenue - a.revenue)
-            .slice(0, 6)
-
-        // ── 13. Recent Reviews ────────────────────────────────────────────────
-        const recentReviews = await prisma.review.findMany({
-            where: { order: { ...tenantFilter } },
-            orderBy: { createdAt: 'desc' },
-            take: 5,
-            include: {
-                order: { include: { customer: { select: { name: true } } } },
+                createdAt: { gte: thirtyDaysAgo },
+                ...(restaurantId ? { restaurantId } : {})
             },
         })
-
-        // ── 14. Growth helpers ────────────────────────────────────────────────
-        const growth = (curr: number, prev: number) =>
-            prev === 0 ? null : Math.round(((curr - prev) / prev) * 100)
 
         const dashboardData = {
             period,

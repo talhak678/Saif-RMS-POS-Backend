@@ -1,8 +1,8 @@
 # 🚀 Saif RMS POS Backend - Complete API Documentation
 
-**Version:** 1.0  
+**Version:** 1.2  
 **Base URL:** `http://localhost:3000` (Development)  
-**Last Updated:** February 12, 2026
+**Last Updated:** February 23, 2026
 
 This comprehensive documentation covers all 45+ API endpoints for the Restaurant Management System backend. All APIs follow RESTful principles and return standardized JSON responses.
 
@@ -716,6 +716,8 @@ Get all orders with filters.
 - `branchId` (optional) - Filter by branch
 - `status` (optional) - Filter by status (PENDING, CONFIRMED, etc.)
 - `customerId` (optional) - Filter by customer
+- `startDate` (optional) - Filter by start date (YYYY-MM-DD or ISO format)
+- `endDate` (optional) - Filter by end date (YYYY-MM-DD or ISO format)
 
 **Response:**
 ```json
@@ -1668,11 +1670,13 @@ Delete notification.
 ## 16. Dashboard Analytics
 
 ### GET `/api/dashboard`
-Get analytics and KPIs for the last 30 days.
+Get analytics and KPIs. Defaults to the last 30 days if no range is specified.
 
 **Query Parameters:**
 - `restaurantId` (optional) - Filter by restaurant
 - `branchId` (optional) - Filter by branch
+- `startDate` (optional) - Filter by start date (YYYY-MM-DD or ISO format)
+- `endDate` (optional) - Filter by end date (YYYY-MM-DD or ISO format)
 
 **Response:**
 ```json
@@ -1703,6 +1707,55 @@ Get analytics and KPIs for the last 30 days.
         "revenue": 74400
       }
     ]
+  }
+}
+```
+
+---
+
+### GET `/api/reports`
+Detailed multi-dimensional reports including trends, customer behavior, inventory consumption, and category performance.
+
+**Query Parameters:**
+- `restaurantId` (optional) - Filter by restaurant
+- `branchId` (optional) - Filter by branch
+- `startDate` (optional) - Filter by start date (YYYY-MM-DD)
+- `endDate` (optional) - Filter by end date (YYYY-MM-DD)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "salesTrend": {
+      "daily": [{ "date": "Oct 24", "sales": 1200, "orders": 5 }, ...],
+      "weekly": [{ "date": "Week 1", "sales": 8400, "orders": 35 }, ...],
+      "monthly": [{ "date": "Oct", "sales": 36000, "orders": 150 }, ...]
+    },
+    "summary": {
+      "payments": { "total": 125000, "change": 15, "count": 450 },
+      "revenue": { "total": 125000, "change": 15, "netProfit": 50000 },
+      "tips": { "total": 0, "change": 0, "averagePerOrder": 0 }
+    },
+    "ordersCustomers": {
+      "orderSource": [{ "name": "POS", "value": 300, "color": "#3B82F6" }, ...],
+      "customerType": [
+        { "name": "Returning", "value": 120, "color": "#3B82F6" },
+        { "name": "New", "value": 80, "color": "#6366F1" }
+      ],
+      "customerLocations": [{ "area": "DHA", "orders": 45 }, ...]
+    },
+    "inventory": {
+      "stockConsumption": [{ "ingredient": "Chicken", "consumed": 150, "unit": "kg" }, ...],
+      "recipePopularity": [{ "recipe": "Biryani", "orders": 85, "revenue": 68000 }, ...]
+    },
+    "branches": {
+      "salesPerBranch": [{ "branch": "Main Branch", "sales": 85000, "orders": 300, "growth": 12 }, ...]
+    },
+    "menuCategories": {
+      "salesByCategory": [{ "category": "Fast Food", "sales": 45000, "value": 36, "color": "#3B82F6" }, ...],
+      "topSellingItems": [{ "item": "Zinger Burger", "sales": 15000, "orders": 120 }, ...]
+    }
   }
 }
 ```
