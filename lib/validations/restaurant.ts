@@ -25,4 +25,5 @@ export const restaurantSchema = z.object({
     serviceType: z.string().optional(),
     lat: z.number().optional(),
     lng: z.number().optional(),
+    phone: z.string().optional(),
 })

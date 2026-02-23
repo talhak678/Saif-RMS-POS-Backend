@@ -59,6 +59,7 @@ model Restaurant {
   description  String?
   status       RestStatus @default(PENDING)
   subscription SubType    @default(FREE)
+  phone        String?
 
   // Social Media & Marketing
   facebookUrl  String? @map("facebook_url")
