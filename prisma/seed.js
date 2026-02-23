@@ -163,7 +163,7 @@ async function main() {
         prisma.setting.create({
             data: {
                 key: 'currency',
-                value: 'PKR',
+                value: 'USD',
                 restaurantId: restaurant.id
             }
         }),
@@ -1061,14 +1061,14 @@ async function main() {
         prisma.faqItem.create({
             data: {
                 question: 'Do you offer delivery?',
-                answer: 'Yes! We offer free delivery for orders above PKR 1000 within our delivery radius.',
+                answer: 'Yes! We offer free delivery for orders above $ 50 within our delivery radius.',
                 restaurantId: restaurant.id
             }
         }),
         prisma.faqItem.create({
             data: {
                 question: 'How can I earn loyalty points?',
-                answer: 'You earn 1 loyalty point for every PKR 10 spent. Points can be redeemed on future orders.',
+                answer: 'You earn 1 loyalty point for every $ 1 spent. Points can be redeemed on future orders.',
                 restaurantId: restaurant.id
             }
         }),

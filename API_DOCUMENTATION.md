@@ -323,7 +323,7 @@ Get all branches with restaurant details.
       "address": "123 Main Street, Lahore",
       "phone": "+92 300 1234567",
       "deliveryRadius": 10.5,
-      "freeDeliveryThreshold": 1000,
+      "freeDeliveryThreshold": 50,
       "deliveryCharge": 150,
       "deliveryOffTime": "23:00",
       "restaurantId": "clxxx...",
@@ -345,7 +345,7 @@ Create a new branch.
   "address": "Phase 5, DHA, Lahore",
   "phone": "+92 300 1234567",
   "deliveryRadius": 8.0,
-  "freeDeliveryThreshold": 1500,
+  "freeDeliveryThreshold": 50,
   "deliveryCharge": 200,
   "deliveryOffTime": "22:00",
   "restaurantId": "clxxx..."
@@ -385,7 +385,7 @@ Get all settings.
     {
       "id": "clxxx...",
       "key": "currency",
-      "value": "PKR",
+      "value": "USD",
       "restaurantId": "clxxx..."
     },
     {
@@ -1224,7 +1224,7 @@ Create a FAQ item.
 ```json
 {
   "question": "Do you offer delivery?",
-  "answer": "Yes, we deliver within 10km radius with free delivery above PKR 1000.",
+  "answer": "Yes, we deliver within 10km radius with free delivery above $ 50.",
   "restaurantId": "clxxx..."
 }
 ```

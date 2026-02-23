@@ -28,7 +28,7 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
         // 2. Create PaymentIntent
         const paymentIntent = await stripe.paymentIntents.create({
             amount: Math.round(Number(amount) * 100), // Stripe expects cents
-            currency: "pkr", // You can change this based on currency settings
+            currency: "usd", // Set to USD as per requirements
             metadata: {
                 orderId: order.id,
                 restaurantId: order.branch.restaurantId,
