@@ -128,9 +128,35 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
             include: {
                 items: { include: { menuItem: true } },
                 payment: true,
-                customer: true
+                customer: true,
+                branch: {
+                    include: { restaurant: true }
+                }
             }
         })
+
+        if (fullOrder) {
+            // 🔔 Create Notifications for all users in this restaurant
+            try {
+                const users = await prisma.user.findMany({
+                    where: { restaurantId: fullOrder.branch.restaurantId },
+                    select: { id: true }
+                });
+
+                if (users.length > 0) {
+                    await prisma.notification.createMany({
+                        data: users.map(user => ({
+                            userId: user.id,
+                            message: `Naya Order pohnch gaya! #${fullOrder.orderNo} (${fullOrder.branch.restaurant.name})`,
+                            isRead: false
+                        }))
+                    });
+                    console.log(`🔔 Notifications created for ${users.length} users.`);
+                }
+            } catch (notifyError) {
+                console.error('Failed to create order notifications:', notifyError);
+            }
+        }
 
         return successResponse(fullOrder, 'Order placed successfully', 201)
     } catch (error: any) {

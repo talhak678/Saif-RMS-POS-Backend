@@ -187,6 +187,28 @@ export async function POST(req: NextRequest) {
             return errorResponse('Order created but could not be retrieved', null, 500)
         }
 
+        // 🔔 Create Notifications for restaurant staff
+        try {
+            const users = await prisma.user.findMany({
+                where: { restaurantId: customer.restaurantId },
+                select: { id: true }
+            });
+
+            if (users.length > 0) {
+                const restaurantName = fullOrder.branch.name; // Using branch name or we could fetch restaurant name
+                await prisma.notification.createMany({
+                    data: users.map(user => ({
+                        userId: user.id,
+                        message: `Website se Naya Order aya hai! #${fullOrder.orderNo}`,
+                        isRead: false
+                    }))
+                });
+                console.log(`🔔 Notifications created for ${users.length} users.`);
+            }
+        } catch (notifyError) {
+            console.error('Failed to create website order notifications:', notifyError);
+        }
+
         return successResponse({
             ...fullOrder,
             discountApplied: discountData ? {

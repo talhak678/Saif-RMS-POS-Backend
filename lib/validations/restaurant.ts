@@ -12,6 +12,12 @@ export const restaurantSchema = z.object({
     tiktokUrl: z.string().url().optional().or(z.literal('')),
     metaPixelId: z.string().optional(),
     customDomain: z.string().optional().or(z.literal('')),
+    smtpHost: z.string().optional().or(z.literal('')),
+    smtpPort: z.number().optional()
+        .or(z.string().transform(v => v === "" ? undefined : Number(v)).optional()),
+    smtpUser: z.string().optional().or(z.literal('')),
+    smtpPass: z.string().optional().or(z.literal('')),
+    smtpSecure: z.boolean().optional().default(false),
     contactName: z.string().optional(),
     contactPhone: z.string().optional(),
     contactEmail: z.string().email().optional().or(z.literal('')),

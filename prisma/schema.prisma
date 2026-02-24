@@ -79,6 +79,14 @@ model Restaurant {
   contactPhone     String? @map("contact_phone")
   contactEmail     String? @map("contact_email")
   notificationEmail String? @map("notification_email")
+
+  // 📧 Custom SMTP Settings per Restaurant
+  smtpHost        String?   @map("smtp_host")
+  smtpPort        Int?      @map("smtp_port")
+  smtpUser        String?   @map("smtp_user")
+  smtpPass        String?   @map("smtp_pass")
+  smtpSecure      Boolean   @default(false) @map("smtp_secure")
+
   address          String?
   city             String?
   postCode         String? @map("post_code")

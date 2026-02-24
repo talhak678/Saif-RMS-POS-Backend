@@ -68,9 +68,52 @@ export const PUT = withAuth(async (req, { params, auth }) => {
                 payment: true,
                 items: true,
                 customer: true,
-                rider: true
+                rider: true,
+                branch: {
+                    include: { restaurant: true }
+                }
             }
         })
+
+        // 📧 Handle Email Notifications based on Status
+        if (order.customer?.email && status) {
+            const { sendEmail, getOrderReadyTemplate, getOrderDeliveredTemplate } = await import('@/lib/email')
+            const restaurant = order.branch.restaurant as any;
+            const restaurantName = restaurant.name;
+            const customerName = order.customer.name || 'Customer';
+
+            // Check if restaurant has custom SMTP settings
+            let smtpConfig = undefined;
+            if (restaurant.smtpHost && restaurant.smtpUser && restaurant.smtpPass) {
+                smtpConfig = {
+                    host: restaurant.smtpHost,
+                    port: restaurant.smtpPort || 587,
+                    secure: restaurant.smtpSecure,
+                    auth: {
+                        user: restaurant.smtpUser,
+                        pass: restaurant.smtpPass
+                    }
+                };
+            }
+
+            if (status === 'KITCHEN_READY') {
+                await sendEmail({
+                    to: order.customer.email,
+                    subject: `Order Ready! - ${restaurantName}`,
+                    html: getOrderReadyTemplate(customerName, order.orderNo.toString(), restaurantName),
+                    fromName: restaurantName,
+                    smtpConfig
+                })
+            } else if (status === 'DELIVERED') {
+                await sendEmail({
+                    to: order.customer.email,
+                    subject: `Order Delivered! - ${restaurantName}`,
+                    html: getOrderDeliveredTemplate(customerName, order.orderNo.toString(), restaurantName),
+                    fromName: restaurantName,
+                    smtpConfig
+                })
+            }
+        }
 
         return successResponse(order, 'Order updated successfully')
     } catch (error: any) {
