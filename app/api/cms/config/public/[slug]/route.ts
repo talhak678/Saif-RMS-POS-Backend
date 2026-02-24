@@ -20,7 +20,10 @@ export async function GET(
             where: {
                 OR: [
                     { slug: slug },
-                    { customDomain: slug }
+                    { slug: slug + '/' },
+                    { customDomain: slug },
+                    { customDomain: slug + '/' },
+                    { customDomain: { contains: slug } } // 🚀 Super flexible fallback
                 ]
             },
             include: {
@@ -35,7 +38,7 @@ export async function GET(
                     }
                 }
             }
-        })
+        }) as any; // Cast to avoid Prisma type issues during build if needed
 
         console.log('🏪 [PUBLIC API] Restaurant found:', restaurant ? 'YES' : 'NO');
         console.log('🆔 [PUBLIC API] Restaurant ID:', restaurant?.id);
