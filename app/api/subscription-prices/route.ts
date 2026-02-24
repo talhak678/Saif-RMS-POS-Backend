@@ -67,6 +67,24 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
             }
         })
 
+        // Also update the restaurant's active subscription status and dates
+        const startDate = new Date();
+        const endDate = new Date();
+        if (billingCycle === 'MONTHLY') {
+            endDate.setMonth(endDate.getMonth() + 1);
+        } else if (billingCycle === 'YEARLY') {
+            endDate.setFullYear(endDate.getFullYear() + 1);
+        }
+
+        await prisma.restaurant.update({
+            where: { id: restaurantId },
+            data: {
+                subscription: plan,
+                subStartDate: startDate,
+                subEndDate: endDate
+            }
+        })
+
         return successResponse(subscriptionPrice, 'Subscription price created successfully', 201)
     } catch (error: any) {
         if (error.code === 'P2002') {
