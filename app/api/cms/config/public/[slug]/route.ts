@@ -8,8 +8,13 @@ export async function GET(
     { params }: { params: Promise<{ slug: string }> }
 ) {
     try {
-        const { slug } = await params;
-        console.log('🔍 [PUBLIC API] Fetching restaurant with slug:', slug);
+        let { slug } = await params;
+
+        // 🛠️ Normalize Slug: Remove protocol (http/https) and trailing slashes
+        // This makes it work even if "https://domain.com/" is saved in DB
+        slug = slug.replace(/^(https?:\/\/)/, '').replace(/\/$/, '');
+
+        console.log('🔍 [PUBLIC API] Normalized slug for lookup:', slug);
 
         const restaurant = await prisma.restaurant.findFirst({
             where: {
