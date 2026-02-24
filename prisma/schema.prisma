@@ -101,6 +101,7 @@ model Restaurant {
   blogPosts     BlogPost[]
   websiteConfig WebsiteConfig?
   subscriptionPrices SubscriptionPrice[]
+  subscriptionRequests SubscriptionRequest[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -598,4 +599,24 @@ model SubscriptionPrice {
 
   @@unique([restaurantId, plan, billingCycle])
   @@map("subscription_prices")
+}
+
+model SubscriptionRequest {
+  id           String        @id @default(cuid())
+  restaurantId String        @map("restaurant_id")
+  restaurant   Restaurant    @relation(fields: [restaurantId], references: [id])
+  plan         SubType
+  billingCycle String        @map("billing_cycle")
+  description  String?
+  status       RequestStatus @default(PENDING)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  @@map("subscription_requests")
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

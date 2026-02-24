@@ -57,6 +57,25 @@ export const PUT = withAuth(async (req: NextRequest, { params, auth }) => {
             }
         })
 
+        // Sync changes to the restaurant record
+        const { plan, billingCycle, restaurantId } = updated
+        const startDate = new Date()
+        const endDate = new Date()
+        if (billingCycle === 'MONTHLY') {
+            endDate.setMonth(endDate.getMonth() + 1)
+        } else if (billingCycle === 'YEARLY') {
+            endDate.setFullYear(endDate.getFullYear() + 1)
+        }
+
+        await prisma.restaurant.update({
+            where: { id: restaurantId },
+            data: {
+                subscription: plan,
+                subStartDate: startDate,
+                subEndDate: endDate
+            }
+        })
+
         return successResponse(updated, 'Subscription price updated successfully')
     } catch (error: any) {
         if (error.code === 'P2002') {
