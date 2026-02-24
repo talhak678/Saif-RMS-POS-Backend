@@ -26,4 +26,6 @@ export const restaurantSchema = z.object({
     lat: z.number().optional(),
     lng: z.number().optional(),
     phone: z.string().optional(),
+    subStartDate: z.string().optional().or(z.date()).optional(),
+    subEndDate: z.string().optional().or(z.date()).optional(),
 })

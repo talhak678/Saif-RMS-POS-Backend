@@ -59,6 +59,8 @@ model Restaurant {
   description  String?
   status       RestStatus @default(PENDING)
   subscription SubType    @default(FREE)
+  subStartDate DateTime?  @map("sub_start_date")
+  subEndDate   DateTime?  @map("sub_end_date")
   phone        String?
 
   // Social Media & Marketing
