@@ -11,6 +11,7 @@ export const restaurantSchema = z.object({
     instagramUrl: z.string().url().optional().or(z.literal('')),
     tiktokUrl: z.string().url().optional().or(z.literal('')),
     metaPixelId: z.string().optional(),
+    customDomain: z.string().optional().or(z.literal('')),
     contactName: z.string().optional(),
     contactPhone: z.string().optional(),
     contactEmail: z.string().email().optional().or(z.literal('')),

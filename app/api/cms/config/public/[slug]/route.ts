@@ -11,8 +11,13 @@ export async function GET(
         const { slug } = await params;
         console.log('🔍 [PUBLIC API] Fetching restaurant with slug:', slug);
 
-        const restaurant = await prisma.restaurant.findUnique({
-            where: { slug },
+        const restaurant = await prisma.restaurant.findFirst({
+            where: {
+                OR: [
+                    { slug: slug },
+                    { customDomain: slug }
+                ]
+            },
             include: {
                 websiteConfig: true,
                 promos: { where: { isActive: true } },
@@ -32,7 +37,7 @@ export async function GET(
         console.log('⚙️ [PUBLIC API] WebsiteConfig exists:', restaurant?.websiteConfig ? 'YES' : 'NO');
 
         if (!restaurant) {
-            console.log('❌ [PUBLIC API] Restaurant not found for slug:', slug);
+            console.log('❌ [PUBLIC API] Restaurant not found for slug or domain:', slug);
             return errorResponse('Restaurant not found', null, 404)
         }
 

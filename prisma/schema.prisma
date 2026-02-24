@@ -55,6 +55,7 @@ model Restaurant {
   id           String     @id @default(cuid())
   name         String
   slug         String     @unique
+  customDomain String?    @unique @map("custom_domain")
   logo         String?
   description  String?
   status       RestStatus @default(PENDING)
