@@ -14,7 +14,8 @@ export async function GET(
             include: {
                 branches: true,
                 settings: true,
-                categories: true
+                categories: true,
+                subscriptionPrices: true
             }
         })
 
