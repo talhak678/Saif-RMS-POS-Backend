@@ -1,8 +1,8 @@
 # 🚀 Saif RMS POS Backend - Complete API Documentation
 
-**Version:** 1.2  
+**Version:** 1.3  
 **Base URL:** `http://localhost:3000` (Development)  
-**Last Updated:** February 23, 2026
+**Last Updated:** February 24, 2026
 
 This comprehensive documentation covers all 45+ API endpoints for the Restaurant Management System backend. All APIs follow RESTful principles and return standardized JSON responses.
 
@@ -29,7 +29,8 @@ This comprehensive documentation covers all 45+ API endpoints for the Restaurant
 17. [Delivery & Riders](#16-delivery--riders)
 18. [Notifications](#17-notifications)
 19. [Dashboard Analytics](#18-dashboard-analytics)
-20. [Enums & Constants](#enums--constants)
+20. [Subscription Requests](#19-subscription-requests)
+21. [Enums & Constants](#enums--constants)
 
 ---
 
@@ -140,6 +141,119 @@ Update user details or password.
 Delete a user.
 
 **Response:** Success message with 200 status.
+
+---
+
+### 🔐 Password Reset Flow (3 Steps)
+
+The password reset is split into three separate steps for better security:
+
+```
+Step 1: POST /api/auth/forgot-password   → sends OTP to email
+Step 2: POST /api/auth/verify-otp        → verifies OTP (no password yet)
+Step 3: POST /api/auth/reset-password    → changes password (using verified session)
+```
+
+---
+
+### POST `/api/auth/forgot-password`
+**Step 1** — Request a 6-digit OTP to be sent to the user's email.
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Validation:**
+- `email`: Required, valid email format
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "OTP has been sent to your email.",
+  "data": null
+}
+```
+
+> **Note:** Even if the email does not exist in the system, a success response is returned to prevent user enumeration attacks.
+
+**OTP is valid for 10 minutes.**
+
+---
+
+### POST `/api/auth/verify-otp`
+**Step 2** — Verify the OTP received in email. Does **not** change the password.
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "otp": "123456"
+}
+```
+
+**Validation:**
+- `email`: Required, valid email format
+- `otp`: Required, exactly 6 digits
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "OTP verified successfully. You can now reset your password.",
+  "data": null
+}
+```
+
+**Error Responses:**
+| Status | Message |
+|--------|---------|
+| `400` | Validation failed |
+| `400` | Invalid request or OTP not found |
+| `400` | OTP has expired. Please request a new one. |
+| `400` | Invalid OTP |
+| `500` | Something went wrong |
+
+> After successful verification, the OTP is cleared from the database and an internal `otpVerified` flag is set on the user. This flag is required for **Step 3**.
+
+---
+
+### POST `/api/auth/reset-password`
+**Step 3** — Set a new password. **Only works after Step 2 is completed.**
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "newPassword": "NewSecurePassword123!"
+}
+```
+
+**Validation:**
+- `email`: Required, valid email format
+- `newPassword`: Required, minimum 6 characters
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Password has been reset successfully.",
+  "data": null
+}
+```
+
+**Error Responses:**
+| Status | Message |
+|--------|---------|
+| `400` | Validation failed |
+| `400` | OTP has not been verified. Please verify your OTP first. |
+| `404` | User not found |
+| `500` | Something went wrong |
+
+> After the password is reset, the `otpVerified` flag is cleared automatically.
 
 ---
 
@@ -322,6 +436,9 @@ Get all branches with restaurant details.
       "name": "Main Branch",
       "address": "123 Main Street, Lahore",
       "phone": "+92 300 1234567",
+      "whatsappNumber": "+92 300 7654321",
+      "isOpen": true,
+      "timing": "9:00 AM - 11:00 PM",
       "deliveryRadius": 10.5,
       "freeDeliveryThreshold": 50,
       "deliveryCharge": 150,
@@ -344,6 +461,9 @@ Create a new branch.
   "name": "DHA Branch",
   "address": "Phase 5, DHA, Lahore",
   "phone": "+92 300 1234567",
+  "whatsappNumber": "+92 300 7654321",
+  "isOpen": true,
+  "timing": "9:00 AM - 11:00 PM",
   "deliveryRadius": 8.0,
   "freeDeliveryThreshold": 50,
   "deliveryCharge": 200,
@@ -351,6 +471,19 @@ Create a new branch.
   "restaurantId": "clxxx..."
 }
 ```
+
+**Validation:**
+- `name`: Required, min 2 characters
+- `address`: Required, min 5 characters
+- `phone`: Optional
+- `whatsappNumber`: Optional
+- `isOpen`: Optional, boolean (default: true)
+- `timing`: Optional, string
+- `deliveryRadius`: Optional, number
+- `freeDeliveryThreshold`: Optional, number
+- `deliveryCharge`: Optional, number
+- `deliveryOffTime`: Optional, string
+- `restaurantId`: Required, valid restaurant ID
 
 ---
 
@@ -1901,6 +2034,553 @@ enum OrderSource {
 
 ---
 
+## 19. Subscription Requests
+
+> Subscription Requests allow restaurants to request a plan upgrade. Super Admins review and approve/reject these requests. Notifications are automatically sent to relevant users.
+
+### 🔐 Access Control Summary
+
+| Action | Super Admin | Restaurant User |
+|--------|:-----------:|:---------------:|
+| GET all requests | ✅ (all restaurants) | ✅ (own restaurant only) |
+| GET single request | ✅ | ✅ (own restaurant only) |
+| POST create request | ✅ | ✅ (own restaurant only) |
+| PUT approve/reject | ✅ | ❌ |
+| DELETE request | ✅ | ✅ (only PENDING, own restaurant) |
+
+---
+
+### GET `/api/subscription-requests`
+Get all subscription upgrade requests.
+
+**Authentication:** Required (Bearer Token)
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `restaurantId` | string | Optional | Filter by restaurant ID. Super Admins can pass any ID; regular users can only filter by their own restaurant. |
+
+**Authorization Rules:**
+- **Super Admin:** Can view requests from ALL restaurants. Can optionally filter by `restaurantId`.
+- **Restaurant User:** Can only view their own restaurant's requests. Passing another restaurant's ID returns `403`.
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Operation successful",
+  "data": [
+    {
+      "id": "clxxx...",
+      "restaurantId": "clxxx...",
+      "restaurant": {
+        "id": "clxxx...",
+        "name": "Saif's Kitchen",
+        "slug": "saifs-kitchen"
+      },
+      "plan": "PREMIUM",
+      "billingCycle": "MONTHLY",
+      "description": "We need more features for our growing business.",
+      "status": "PENDING",
+      "createdAt": "2026-02-24T10:00:00.000Z",
+      "updatedAt": "2026-02-24T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+**Error Responses:**
+| Status | Message |
+|--------|---------|
+| `403` | Unauthorized to view other restaurant requests |
+| `500` | Failed to fetch subscription requests |
+
+---
+
+### POST `/api/subscription-requests`
+Submit a new subscription upgrade request.
+
+**Authentication:** Required (Bearer Token)
+
+**Request Body:**
+```json
+{
+  "restaurantId": "clxxx...",
+  "plan": "PREMIUM",
+  "billingCycle": "MONTHLY",
+  "description": "We need more features for our growing business."
+}
+```
+
+**Field Validation:**
+
+| Field | Type | Required | Rules |
+|-------|------|----------|-------|
+| `restaurantId` | string | ✅ Yes | Must be a valid restaurant ID |
+| `plan` | enum | ✅ Yes | One of: `FREE`, `BASIC`, `PREMIUM`, `ENTERPRISE` |
+| `billingCycle` | enum | ✅ Yes | One of: `MONTHLY`, `YEARLY` |
+| `description` | string | ❌ Optional | Additional notes about the request |
+
+**Authorization Rules:**
+- **Super Admin:** Can submit on behalf of any restaurant.
+- **Restaurant User:** Can only submit for their own restaurant. Passing a different `restaurantId` returns `403`.
+
+**Side Effect — Notifications:**
+After a request is created, a notification is automatically sent to **all Super Admin users** with the message:
+> `New subscription upgrade request from "[Restaurant Name]" for [PLAN] plan ([BILLING_CYCLE]).`
+
+**Success Response (201):**
+```json
+{
+  "success": true,
+  "message": "Subscription request submitted successfully",
+  "data": {
+    "id": "clxxx...",
+    "restaurantId": "clxxx...",
+    "restaurant": {
+      "id": "clxxx...",
+      "name": "Saif's Kitchen"
+    },
+    "plan": "PREMIUM",
+    "billingCycle": "MONTHLY",
+    "description": "We need more features for our growing business.",
+    "status": "PENDING",
+    "createdAt": "2026-02-24T10:00:00.000Z",
+    "updatedAt": "2026-02-24T10:00:00.000Z"
+  }
+}
+```
+
+**Error Responses:**
+| Status | Message |
+|--------|---------|
+| `400` | Validation failed (with field-level errors) |
+| `403` | Unauthorized to create request for this restaurant |
+| `500` | Failed to submit subscription request |
+
+**Validation Error Example (400):**
+```json
+{
+  "success": false,
+  "message": "Validation failed",
+  "error": {
+    "plan": ["Invalid enum value. Expected 'FREE' | 'BASIC' | 'PREMIUM' | 'ENTERPRISE'"],
+    "billingCycle": ["Invalid enum value. Expected 'MONTHLY' | 'YEARLY'"]
+  },
+  "statusCode": 400
+}
+```
+
+---
+
+### GET `/api/subscription-requests/[id]`
+Get a single subscription request by its ID.
+
+**Authentication:** Required (Bearer Token)
+
+**URL Parameters:**
+- `id` — The subscription request ID (string, required)
+
+**Authorization Rules:**
+- **Super Admin:** Can view any request.
+- **Restaurant User:** Can only view requests belonging to their own restaurant.
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Operation successful",
+  "data": {
+    "id": "clxxx...",
+    "restaurantId": "clxxx...",
+    "restaurant": {
+      "id": "clxxx...",
+      "name": "Saif's Kitchen",
+      "slug": "saifs-kitchen"
+    },
+    "plan": "ENTERPRISE",
+    "billingCycle": "YEARLY",
+    "description": "Expanding to 5 branches next quarter.",
+    "status": "APPROVED",
+    "createdAt": "2026-02-24T10:00:00.000Z",
+    "updatedAt": "2026-02-24T12:30:00.000Z"
+  }
+}
+```
+
+**Error Responses:**
+| Status | Message |
+|--------|---------|
+| `403` | Unauthorized to view this request |
+| `404` | Subscription request not found |
+| `500` | Failed to fetch subscription request |
+
+---
+
+### PUT `/api/subscription-requests/[id]`
+Approve or reject a subscription request. **Only Super Admin can perform this action.**
+
+**Authentication:** Required (Bearer Token — Super Admin only)
+
+**URL Parameters:**
+- `id` — The subscription request ID (string, required)
+
+**Request Body:**
+```json
+{
+  "status": "APPROVED"
+}
+```
+
+**Field Validation:**
+
+| Field | Type | Required | Rules |
+|-------|------|----------|-------|
+| `status` | enum | ✅ Yes | One of: `PENDING`, `APPROVED`, `REJECTED` |
+
+**Side Effect — Notifications:**
+After status is updated, a notification is automatically sent to **all users of the restaurant** with the message:
+> `Your subscription request for the [PLAN] plan has been [approved/rejected].`
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Subscription request approved successfully",
+  "data": {
+    "id": "clxxx...",
+    "restaurantId": "clxxx...",
+    "restaurant": {
+      "id": "clxxx...",
+      "name": "Saif's Kitchen"
+    },
+    "plan": "PREMIUM",
+    "billingCycle": "MONTHLY",
+    "description": "We need more features for our growing business.",
+    "status": "APPROVED",
+    "createdAt": "2026-02-24T10:00:00.000Z",
+    "updatedAt": "2026-02-24T12:30:00.000Z"
+  }
+}
+```
+
+**Error Responses:**
+| Status | Message |
+|--------|---------|
+| `400` | Validation failed |
+| `403` | Unauthorized to update request status |
+| `404` | Subscription request not found |
+| `500` | Failed to update subscription request |
+
+---
+
+### DELETE `/api/subscription-requests/[id]`
+Delete a subscription request.
+
+**Authentication:** Required (Bearer Token)
+
+**URL Parameters:**
+- `id` — The subscription request ID (string, required)
+
+**Authorization Rules:**
+- **Super Admin:** Can delete any request regardless of status.
+- **Restaurant User:** Can only delete their **own restaurant's** requests that are still in **`PENDING`** status. Attempting to delete an `APPROVED` or `REJECTED` request returns `403`.
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Subscription request deleted successfully",
+  "data": null
+}
+```
+
+**Error Responses:**
+| Status | Message |
+|--------|---------|
+| `403` | Unauthorized to delete this request |
+| `404` | Subscription request not found |
+| `500` | Failed to delete subscription request |
+
+---
+
+### Subscription Request Enums
+
+**Plan:**
+```typescript
+enum SubscriptionPlan {
+  FREE        // Default free tier
+  BASIC       // Basic features
+  PREMIUM     // Premium features
+  ENTERPRISE  // Full enterprise access
+}
+```
+
+**Billing Cycle:**
+```typescript
+enum BillingCycle {
+  MONTHLY  // Billed every month
+  YEARLY   // Billed annually (usually discounted)
+}
+```
+
+**Request Status:**
+```typescript
+enum SubscriptionRequestStatus {
+  PENDING   // Awaiting Super Admin review
+  APPROVED  // Approved by Super Admin
+  REJECTED  // Rejected by Super Admin
+}
+```
+
+---
+
+### Complete Workflow Example
+
+```
+1. Restaurant User  →  POST /api/subscription-requests
+                        (Submits upgrade request, status = PENDING)
+                        ↓
+                    Super Admins receive notifications
+
+2. Super Admin      →  GET /api/subscription-requests
+                        (Reviews all pending requests)
+                        ↓
+                    PUT /api/subscription-requests/[id]
+                        { "status": "APPROVED" }  or  { "status": "REJECTED" }
+                        ↓
+                    Restaurant Users receive notification
+
+3. If APPROVED      →  Super Admin manually updates Restaurant subscription plan
+                        via PUT /api/restaurants/[id] { "subscription": "PREMIUM" }
+```
+
+---
+
+## 20. Subscription Prices
+
+> Subscription Prices define the pricing tiers (FREE, BASIC, PREMIUM, ENTERPRISE) for restaurants. Each price entry includes a `features` array that lists the features included in that plan — useful for displaying plan comparison cards in the frontend.
+
+### 🔐 Access Control Summary
+
+| Action | Super Admin | Restaurant User |
+|--------|:-----------:|:---------------:|
+| GET all prices | ✅ (all restaurants) | ✅ (own restaurant only) |
+| GET single price | ✅ | ❌ |
+| POST create price | ✅ | ❌ |
+| PUT update price | ✅ | ❌ |
+| DELETE price | ✅ | ❌ |
+
+---
+
+### GET `/api/subscription-prices`
+Get all subscription price entries.
+
+**Authentication:** Required (Bearer Token)
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `restaurantId` | string | Optional | Filter by restaurant ID. Super Admins can pass any ID; regular users see their own restaurant only. |
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Operation successful",
+  "data": [
+    {
+      "id": "clxxx...",
+      "plan": "PREMIUM",
+      "price": "2999.00",
+      "billingCycle": "MONTHLY",
+      "isActive": true,
+      "features": [
+        "Unlimited Orders",
+        "Custom Domain",
+        "Priority Support",
+        "Advanced Analytics"
+      ],
+      "restaurantId": "clxxx...",
+      "restaurant": {
+        "id": "clxxx...",
+        "name": "Saif's Kitchen",
+        "slug": "saifs-kitchen"
+      },
+      "createdAt": "2026-02-25T10:00:00.000Z",
+      "updatedAt": "2026-02-25T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### POST `/api/subscription-prices`
+Create a new subscription price entry. **Super Admin only.**
+
+**Authentication:** Required (Bearer Token — Super Admin only)
+
+**Request Body:**
+```json
+{
+  "plan": "PREMIUM",
+  "price": 2999,
+  "billingCycle": "MONTHLY",
+  "isActive": true,
+  "features": [
+    "Unlimited Orders",
+    "Custom Domain",
+    "Priority Support",
+    "Advanced Analytics"
+  ],
+  "restaurantId": "clxxx..."
+}
+```
+
+**Field Validation:**
+
+| Field | Type | Required | Rules |
+|-------|------|----------|-------|
+| `plan` | enum | ✅ Yes | One of: `FREE`, `BASIC`, `PREMIUM`, `ENTERPRISE` |
+| `price` | number | ✅ Yes | Non-negative number |
+| `billingCycle` | string | ✅ Yes | e.g. `MONTHLY`, `YEARLY`. Defaults to `MONTHLY` |
+| `isActive` | boolean | ❌ Optional | Defaults to `true` |
+| `features` | string[] | ❌ Optional | Array of feature strings. Defaults to `[]` |
+| `restaurantId` | string | ✅ Yes | Valid restaurant ID |
+
+**Side Effect:**  
+After creating a price entry, the restaurant's `subscription`, `subStartDate`, and `subEndDate` fields are automatically updated.
+
+**Success Response (201):**
+```json
+{
+  "success": true,
+  "message": "Subscription price created successfully",
+  "data": {
+    "id": "clxxx...",
+    "plan": "PREMIUM",
+    "price": "2999.00",
+    "billingCycle": "MONTHLY",
+    "isActive": true,
+    "features": ["Unlimited Orders", "Custom Domain", "Priority Support"],
+    "restaurantId": "clxxx...",
+    "restaurant": {
+      "id": "clxxx...",
+      "name": "Saif's Kitchen",
+      "slug": "saifs-kitchen"
+    },
+    "createdAt": "2026-02-25T10:00:00.000Z",
+    "updatedAt": "2026-02-25T10:00:00.000Z"
+  }
+}
+```
+
+**Error Responses:**
+| Status | Message |
+|--------|---------|
+| `400` | Validation failed (with field-level errors) |
+| `403` | Unauthorized to create pricing for this restaurant |
+| `409` | A pricing entry for this plan and billing cycle already exists for this restaurant |
+| `500` | Failed to create subscription price |
+
+---
+
+### GET `/api/subscription-prices/[id]`
+Get a single subscription price entry by ID. **Super Admin only.**
+
+**Authentication:** Required (Bearer Token — Super Admin only)
+
+**Success Response (200):** Single subscription price object (same shape as GET list items).
+
+**Error Responses:**
+| Status | Message |
+|--------|---------|
+| `403` | Unauthorized to view this pricing |
+| `404` | Subscription price not found |
+| `500` | Failed to fetch subscription price |
+
+---
+
+### PUT `/api/subscription-prices/[id]`
+Update a subscription price entry. **Super Admin only.**
+
+**Authentication:** Required (Bearer Token — Super Admin only)
+
+**Request Body (all fields optional):**
+```json
+{
+  "plan": "ENTERPRISE",
+  "price": 5999,
+  "billingCycle": "YEARLY",
+  "isActive": true,
+  "features": [
+    "Unlimited Orders",
+    "Custom Domain",
+    "24/7 Dedicated Support",
+    "White-label App",
+    "Advanced Analytics"
+  ]
+}
+```
+
+**Field Validation:**
+
+| Field | Type | Required | Rules |
+|-------|------|----------|-------|
+| `plan` | enum | ❌ Optional | One of: `FREE`, `BASIC`, `PREMIUM`, `ENTERPRISE` |
+| `price` | number | ❌ Optional | Non-negative number |
+| `billingCycle` | string | ❌ Optional | e.g. `MONTHLY`, `YEARLY` |
+| `isActive` | boolean | ❌ Optional | — |
+| `features` | string[] | ❌ Optional | Array of feature strings. Passing this field **replaces** the existing features list. |
+
+**Side Effect:**  
+After updating, the restaurant's `subscription`, `subStartDate`, and `subEndDate` fields are automatically synced.
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Subscription price updated successfully",
+  "data": { ... }
+}
+```
+
+**Error Responses:**
+| Status | Message |
+|--------|---------|
+| `400` | Validation failed |
+| `403` | Unauthorized to update this pricing |
+| `404` | Subscription price not found |
+| `409` | A pricing entry for this plan and billing cycle already exists for this restaurant |
+| `500` | Failed to update subscription price |
+
+---
+
+### DELETE `/api/subscription-prices/[id]`
+Delete a subscription price entry. **Super Admin only.**
+
+**Authentication:** Required (Bearer Token — Super Admin only)
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Subscription price deleted successfully",
+  "data": null
+}
+```
+
+**Error Responses:**
+| Status | Message |
+|--------|---------|
+| `403` | Unauthorized to delete this pricing |
+| `404` | Subscription price not found |
+| `500` | Failed to delete subscription price |
+
+---
+
 ## Additional Resources
 
 - **Order Status Flow:** See `docs/ORDER_STATUS_FLOW.md`
@@ -1913,6 +2593,6 @@ enum OrderSource {
 
 For questions or issues, contact the development team or refer to the project repository.
 
-**Last Updated:** February 19, 2026  
-**Version:** 1.1  
-**Total Endpoints:** 55+
+**Last Updated:** February 24, 2026  
+**Version:** 1.3  
+**Total Endpoints:** 60+

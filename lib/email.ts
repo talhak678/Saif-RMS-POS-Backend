@@ -89,3 +89,18 @@ export function getOrderDeliveredTemplate(customerName: string, orderId: string,
         </div>
     `
 }
+export function getOtpEmailTemplate(otp: string) {
+    return `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #5d69b9;">Password Reset OTP 🔐</h2>
+            <p>Assalam-o-Alaikum,</p>
+            <p>Aap ne apne account ka password reset karne ke liye request ki hai. Aap ka OTP (One Time Password) neechay diya gaya hai:</p>
+            <div style="background-color: #f0f2ff; padding: 20px; border-radius: 10px; margin: 20px 0; text-align: center;">
+                <h1 style="color: #5d69b9; letter-spacing: 5px; margin: 0;">${otp}</h1>
+            </div>
+            <p>Yeh OTP <strong>10 minutes</strong> ke liye valid hai. Agar aap ne yeh request nahi ki, toh is email ko ignore karein.</p>
+            <hr style="border: 0; border-top: 1px solid #eee;">
+            <p style="font-size: 12px; color: #888;">Saif RMS POS Team</p>
+        </div>
+    `
+}
