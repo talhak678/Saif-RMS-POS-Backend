@@ -4,23 +4,15 @@ import { NextRequest } from 'next/server'
 import { subscriptionPriceSchema } from '@/lib/validations/subscription-price'
 import { withAuth } from '@/lib/with-auth'
 
-export const GET = withAuth(async (req: NextRequest, { auth }) => {
+export const GET = async (req: NextRequest) => {
     try {
         const { searchParams } = new URL(req.url)
         const restaurantId = searchParams.get('restaurantId')
 
-        // If not super admin, they can only see their own restaurant's pricing
-        if (auth.role !== 'SUPER_ADMIN' && auth.restaurantId) {
-            if (restaurantId && restaurantId !== auth.restaurantId) {
-                return errorResponse('Unauthorized to view other restaurant pricing', null, 403)
-            }
-        }
-
-        const effectiveRestaurantId = auth.role === 'SUPER_ADMIN' ? restaurantId : auth.restaurantId
-
         const prices = await (prisma as any).subscriptionPrice.findMany({
             where: {
-                ...(effectiveRestaurantId ? { restaurantId: effectiveRestaurantId } : {}),
+                ...(restaurantId ? { restaurantId } : {}),
+                isActive: true
             },
             include: {
                 restaurant: {
@@ -34,7 +26,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
     } catch (error: any) {
         return errorResponse('Failed to fetch subscription prices', error.message, 500)
     }
-})
+}
 
 export const POST = withAuth(async (req: NextRequest, { auth }) => {
     try {
