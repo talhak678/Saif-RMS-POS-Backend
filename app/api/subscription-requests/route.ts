@@ -75,11 +75,17 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
             }
         })
 
+        const restaurantDetails = await prisma.restaurant.findUnique({
+            where: { id: restaurantId },
+            select: { phone: true, contactEmail: true, notificationEmail: true }
+        });
+        const contactInfo = `(Email: ${restaurantDetails?.contactEmail || restaurantDetails?.notificationEmail || 'N/A'}, Phone: ${restaurantDetails?.phone || 'N/A'})`;
+
         for (const admin of superAdmins) {
             await prisma.notification.create({
                 data: {
                     userId: admin.id,
-                    message: `New subscription upgrade request from "${subscriptionRequest.restaurant.name}" for ${plan} plan (${billingCycle}).`,
+                    message: `New subscription upgrade request from "${subscriptionRequest.restaurant.name}" for ${plan} plan (${billingCycle}). ${contactInfo}`,
                     isRead: false
                 }
             })

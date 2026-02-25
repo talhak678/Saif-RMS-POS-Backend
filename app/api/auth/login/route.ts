@@ -33,6 +33,22 @@ export async function POST(req: NextRequest) {
             return errorResponse('Invalid credentials', null, 401)
         }
 
+        // 🛑 Subscription Expiry Check during Login
+        if (user.role.name !== 'SUPER_ADMIN' && user.restaurantId) {
+            const restaurant = await prisma.restaurant.findUnique({
+                where: { id: user.restaurantId },
+                select: { subEndDate: true, name: true }
+            });
+
+            if (restaurant?.subEndDate && new Date(restaurant.subEndDate) < new Date()) {
+                return errorResponse(
+                    `Login failed. Subscription for "${restaurant.name}" has expired. Please contact support or renew.`,
+                    { expired: true },
+                    402 // Payment Required
+                );
+            }
+        }
+
         // Generate JWT
         const token = await new SignJWT({
             userId: user.id,
