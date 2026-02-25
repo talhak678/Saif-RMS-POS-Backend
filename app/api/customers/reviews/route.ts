@@ -32,19 +32,20 @@ export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url)
         const restaurantSlug = searchParams.get('slug')
+        const restaurantId = searchParams.get('restaurantId')
         const menuItemId = searchParams.get('menuItemId')
         const limit = parseInt(searchParams.get('limit') || '20')
 
-        if (!restaurantSlug) {
-            return errorResponse('Restaurant slug is required', null, 400)
+        if (!restaurantSlug && !restaurantId) {
+            return errorResponse('Restaurant slug or restaurantId is required', null, 400)
         }
 
         const reviews = await prisma.review.findMany({
             where: {
                 order: {
-                    branch: {
-                        restaurant: { slug: restaurantSlug }
-                    }
+                    branch: restaurantSlug
+                        ? { restaurant: { slug: restaurantSlug } }
+                        : { restaurantId: restaurantId! }
                 },
                 ...(menuItemId ? { menuItemId } : {})
             },

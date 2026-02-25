@@ -104,3 +104,37 @@ export function getOtpEmailTemplate(otp: string) {
         </div>
     `
 }
+export function getSubscriptionWarningTemplate(customerName: string, daysLeft: number, restaurantName: string, expiryDate: string) {
+    return `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #ff6600;">Subscription Expiry Warning! ⚠️</h2>
+            <p>Assalam-o-Alaikum <strong>${customerName}</strong>,</p>
+            <p>Aap ke restaurant <strong>${restaurantName}</strong> ki subscription <strong>${daysLeft} dino</strong> mein khatam hone wali hai.</p>
+            <div style="background-color: #fff9f0; padding: 15px; border-radius: 5px; margin: 20px 0; border: 1px solid #ffeeba;">
+                <p><strong>Restaurant:</strong> ${restaurantName}</p>
+                <p><strong>Expiry Date:</strong> ${expiryDate}</p>
+                <p><strong>Days Remaining:</strong> ${daysLeft} days</p>
+            </div>
+            <p>Baraye meherbani apna plan renew karein taake aap ki service mein koi rukawat na aaye.</p>
+            <p>Aap dashboard mein ja kar "Pay Now" button se renew kar sakte hain.</p>
+            <hr style="border: 0; border-top: 1px solid #eee;">
+            <p style="font-size: 12px; color: #888;">Saif RMS POS Team</p>
+        </div>
+    `
+}
+
+export function getSubscriptionExpiredTemplate(customerName: string, restaurantName: string) {
+    return `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; border-top: 5px solid #dc3545;">
+            <h2 style="color: #dc3545;">Subscription Expired! 🛑</h2>
+            <p>Assalam-o-Alaikum <strong>${customerName}</strong>,</p>
+            <p>Aap ke restaurant <strong>${restaurantName}</strong> ki subscription khatam ho chuki hai.</p>
+            <div style="background-color: #fff5f5; padding: 15px; border-radius: 5px; margin: 20px 0; border: 1px solid #f8d7da;">
+                <p>Access to your dashboard features has been restricted until renewal.</p>
+            </div>
+            <p>Dobara access hasil karne ke liye baraye meherbani foran renew karein.</p>
+            <hr style="border: 0; border-top: 1px solid #eee;">
+            <p style="font-size: 12px; color: #888;">Saif RMS POS Team</p>
+        </div>
+    `
+}

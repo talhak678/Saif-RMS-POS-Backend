@@ -541,6 +541,7 @@ model Review {
   id         String    @id @default(cuid())
   rating     Int
   comment    String?
+  reply      String?   // Merchant reply
   aiEnhanced Boolean   @default(false) @map("ai_enhanced") // For AI generated summaries
   orderId    String    @unique @map("order_id")
   order      Order     @relation(fields: [orderId], references: [id])
@@ -626,6 +627,9 @@ model SubscriptionRequest {
   plan         SubType?
   billingCycle String        @map("billing_cycle")
   description  String?
+  contactName  String?       @map("contact_name")
+  contactEmail String?       @map("contact_email")
+  contactPhone String?       @map("contact_phone")
   status       RequestStatus @default(PENDING)
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")

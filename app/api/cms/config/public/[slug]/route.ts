@@ -51,6 +51,7 @@ export async function GET(
 
         const data = {
             restaurantId: restaurant.id,
+            slug: restaurant.slug,
             restaurantLogo: restaurant.logo,
             restaurantName: restaurant.name,
             config: restaurant.websiteConfig || {

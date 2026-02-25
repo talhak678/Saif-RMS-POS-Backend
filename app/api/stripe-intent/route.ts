@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
 import { successResponse, errorResponse } from "@/lib/api-response";
-import { withAuth } from "@/lib/with-auth";
 import Stripe from "stripe";
 import prisma from "@/lib/prisma";
+import { getAuthContext } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -11,33 +11,38 @@ const stripe = new Stripe(stripeSecretKey || "", {
     apiVersion: "2024-06-20" as any,
 });
 
-export const POST = withAuth(async (req: NextRequest, { auth }) => {
+// POST /api/stripe-intent — accepts both admin tokens AND customer-tokens
+export async function POST(req: NextRequest) {
     try {
+        // Get auth context — supports both admin (auth_token) and customer (customer-token)
+        const auth = await getAuthContext(req);
+
+        if (!auth || !auth.userId) {
+            return errorResponse("Authentication required", "Unauthorized", 401);
+        }
+
         const body = await req.json();
         const { orderId, amount } = body;
-        console.log("💳 Creating Stripe Intent for Order Input:", orderId, "Amount:", amount);
+        console.log("💳 Creating Stripe Intent for Order Input:", orderId, "Amount:", amount, "Role:", auth.role);
 
         if (!orderId || !amount) {
             return errorResponse("Missing orderId or amount", "Bad Request", 400);
         }
 
         // Handle both Order ID (string) and Order Number (integer)
-        // Remove '#' if present
         const cleanOrderId = String(orderId).replace('#', '').trim();
         const isNumeric = /^\d+$/.test(cleanOrderId);
 
-        let order;
+        let order: any;
         if (isNumeric) {
-            // Search by orderNo if input is numeric
             order = await prisma.order.findFirst({
                 where: { orderNo: parseInt(cleanOrderId) },
-                include: { branch: true }
+                select: { id: true, customerId: true, branch: { select: { restaurantId: true } } }
             });
         } else {
-            // Search by literal ID
             order = await prisma.order.findUnique({
                 where: { id: cleanOrderId },
-                include: { branch: true }
+                select: { id: true, customerId: true, branch: { select: { restaurantId: true } } }
             });
         }
 
@@ -46,18 +51,28 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
             return errorResponse(`Order ${orderId} not found in database`, "Not Found", 404);
         }
 
-        if (auth.role !== 'SUPER_ADMIN' && order.branch.restaurantId !== auth.restaurantId) {
-            console.error("🚫 Unauthorized access attempt for order:", orderId);
+        // Authorization — allow: SUPER_ADMIN, admins of same restaurant, or the customer who placed the order
+        // NOTE: auth.ts returns role as lowercase 'customer' for customer tokens
+        const isCustomer = auth.role === "customer";
+        const isSuperAdmin = auth.role === "SUPER_ADMIN";
+        const isSameRestaurant = !isCustomer && auth.restaurantId && order.branch.restaurantId === auth.restaurantId;
+        const isOrderOwner = isCustomer && (order.customerId === auth.userId);
+
+        console.log("🔐 Auth check:", { role: auth.role, isCustomer, isSuperAdmin, isSameRestaurant, isOrderOwner, orderCustomerId: order.customerId, authUserId: auth.userId });
+
+        if (!isSuperAdmin && !isSameRestaurant && !isOrderOwner) {
+            console.error("🚫 Unauthorized access attempt for order:", orderId, "by user:", auth.userId, "role:", auth.role);
             return errorResponse("You are not authorized to pay for this order", "Forbidden", 403);
         }
 
-        // 2. Create PaymentIntent
+        // Create PaymentIntent
         const paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(Number(amount) * 100), // Stripe expects cents
-            currency: "usd", // Changed to USD to match frontend label and avoid "amount too small" error
+            amount: Math.round(Number(amount) * 100), // Stripe expects cents (e.g. $10.00 → 1000)
+            currency: "usd",
             metadata: {
                 orderId: order.id,
                 restaurantId: order.branch.restaurantId,
+                customerId: order.customerId || "",
             },
             automatic_payment_methods: {
                 enabled: true,
@@ -80,6 +95,8 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
             }
         });
 
+        console.log("✅ Stripe PaymentIntent created:", paymentIntent.id);
+
         return successResponse({
             clientSecret: paymentIntent.client_secret,
         });
@@ -88,4 +105,4 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
         console.error("Stripe Create Intent Error:", error);
         return errorResponse("Failed to create payment intent", error.message, 500);
     }
-});
+}
