@@ -2,7 +2,7 @@ import prisma from '@/lib/prisma'
 import { successResponse, errorResponse } from '@/lib/api-response'
 import { NextRequest } from 'next/server'
 import { resetPasswordSchema } from '@/lib/validations/user'
-import { comparePassword, hashPassword } from '@/lib/auth-utils'
+import { hashPassword } from '@/lib/auth-utils'
 
 export const POST = async (req: NextRequest) => {
     try {
@@ -13,37 +13,30 @@ export const POST = async (req: NextRequest) => {
             return errorResponse('Validation failed', validation.error.flatten().fieldErrors, 400)
         }
 
-        const { email, otp, newPassword } = validation.data
+        const { email, newPassword } = validation.data
 
         const user = await prisma.user.findUnique({
             where: { email }
         })
 
-        if (!user || !user.otp || !user.otpExpires) {
-            return errorResponse('Invalid request or OTP expired', null, 400)
+        if (!user) {
+            return errorResponse('User not found', null, 404)
         }
 
-        // Check expiry
-        if (new Date() > user.otpExpires) {
-            return errorResponse('OTP has expired', null, 400)
+        // Ensure OTP was already verified via /api/auth/verify-otp
+        if (!user.otpVerified) {
+            return errorResponse('OTP has not been verified. Please verify your OTP first.', null, 400)
         }
 
-        // Verify OTP
-        const isOtpValid = await comparePassword(otp, user.otp)
-        if (!isOtpValid) {
-            return errorResponse('Invalid OTP', null, 400)
-        }
-
-        // Hash new password
+        // Hash the new password
         const hashedNewPassword = await hashPassword(newPassword)
 
-        // Update user and clear OTP fields
+        // Update password and clear the verified flag
         await prisma.user.update({
             where: { id: user.id },
             data: {
                 password: hashedNewPassword,
-                otp: null,
-                otpExpires: null
+                otpVerified: false,
             }
         })
 

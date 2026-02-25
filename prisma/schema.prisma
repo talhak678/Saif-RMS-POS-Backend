@@ -47,6 +47,7 @@ model User {
   // Password reset fields
   otp          String?
   otpExpires   DateTime?   @map("otp_expires")
+  otpVerified  Boolean     @default(false) @map("otp_verified")
 
   @@map("users")
 }

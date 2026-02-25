@@ -144,8 +144,20 @@ Delete a user.
 
 ---
 
+### 🔐 Password Reset Flow (3 Steps)
+
+The password reset is split into three separate steps for better security:
+
+```
+Step 1: POST /api/auth/forgot-password   → sends OTP to email
+Step 2: POST /api/auth/verify-otp        → verifies OTP (no password yet)
+Step 3: POST /api/auth/reset-password    → changes password (using verified session)
+```
+
+---
+
 ### POST `/api/auth/forgot-password`
-Request a password reset OTP via email.
+**Step 1** — Request a 6-digit OTP to be sent to the user's email.
 
 **Request Body:**
 ```json
@@ -154,7 +166,10 @@ Request a password reset OTP via email.
 }
 ```
 
-**Response:**
+**Validation:**
+- `email`: Required, valid email format
+
+**Success Response (200):**
 ```json
 {
   "success": true,
@@ -163,21 +178,65 @@ Request a password reset OTP via email.
 }
 ```
 
+> **Note:** Even if the email does not exist in the system, a success response is returned to prevent user enumeration attacks.
+
+**OTP is valid for 10 minutes.**
+
 ---
 
-### POST `/api/auth/reset-password`
-Reset password using the received OTP.
+### POST `/api/auth/verify-otp`
+**Step 2** — Verify the OTP received in email. Does **not** change the password.
 
 **Request Body:**
 ```json
 {
   "email": "user@example.com",
-  "otp": "123456",
+  "otp": "123456"
+}
+```
+
+**Validation:**
+- `email`: Required, valid email format
+- `otp`: Required, exactly 6 digits
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "OTP verified successfully. You can now reset your password.",
+  "data": null
+}
+```
+
+**Error Responses:**
+| Status | Message |
+|--------|---------|
+| `400` | Validation failed |
+| `400` | Invalid request or OTP not found |
+| `400` | OTP has expired. Please request a new one. |
+| `400` | Invalid OTP |
+| `500` | Something went wrong |
+
+> After successful verification, the OTP is cleared from the database and an internal `otpVerified` flag is set on the user. This flag is required for **Step 3**.
+
+---
+
+### POST `/api/auth/reset-password`
+**Step 3** — Set a new password. **Only works after Step 2 is completed.**
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
   "newPassword": "NewSecurePassword123!"
 }
 ```
 
-**Response:**
+**Validation:**
+- `email`: Required, valid email format
+- `newPassword`: Required, minimum 6 characters
+
+**Success Response (200):**
 ```json
 {
   "success": true,
@@ -185,6 +244,16 @@ Reset password using the received OTP.
   "data": null
 }
 ```
+
+**Error Responses:**
+| Status | Message |
+|--------|---------|
+| `400` | Validation failed |
+| `400` | OTP has not been verified. Please verify your OTP first. |
+| `404` | User not found |
+| `500` | Something went wrong |
+
+> After the password is reset, the `otpVerified` flag is cleared automatically.
 
 ---
 
