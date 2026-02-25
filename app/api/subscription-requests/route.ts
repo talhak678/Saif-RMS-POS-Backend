@@ -87,7 +87,7 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
             await prisma.notification.create({
                 data: {
                     userId: admin.id,
-                    message: `New subscription upgrade request from "${subscriptionRequest.restaurant.name}" for ${plan} plan (${billingCycle}). ${contactInfo}`,
+                    message: `New subscription upgrade request from "${subscriptionRequest.restaurant?.name || 'New Restaurant'}" for ${plan} plan (${billingCycle}). ${contactInfo}`,
                     isRead: false
                 }
             })
