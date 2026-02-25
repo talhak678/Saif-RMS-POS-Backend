@@ -14,6 +14,7 @@ export const discountCodeSchema = z.object({
 export const reviewSchema = z.object({
     rating: z.number().int().min(1).max(5),
     comment: z.string().optional(),
+    reply: z.string().optional(),
     orderId: z.string().cuid('Invalid order ID'),
     menuItemId: z.string().cuid('Invalid menu item ID').optional(),
 })

@@ -541,6 +541,7 @@ model Review {
   id         String    @id @default(cuid())
   rating     Int
   comment    String?
+  reply      String?   // Merchant reply
   aiEnhanced Boolean   @default(false) @map("ai_enhanced") // For AI generated summaries
   orderId    String    @unique @map("order_id")
   order      Order     @relation(fields: [orderId], references: [id])
