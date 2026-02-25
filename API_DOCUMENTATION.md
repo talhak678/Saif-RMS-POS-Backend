@@ -436,6 +436,9 @@ Get all branches with restaurant details.
       "name": "Main Branch",
       "address": "123 Main Street, Lahore",
       "phone": "+92 300 1234567",
+      "whatsappNumber": "+92 300 7654321",
+      "isOpen": true,
+      "timing": "9:00 AM - 11:00 PM",
       "deliveryRadius": 10.5,
       "freeDeliveryThreshold": 50,
       "deliveryCharge": 150,
@@ -458,6 +461,9 @@ Create a new branch.
   "name": "DHA Branch",
   "address": "Phase 5, DHA, Lahore",
   "phone": "+92 300 1234567",
+  "whatsappNumber": "+92 300 7654321",
+  "isOpen": true,
+  "timing": "9:00 AM - 11:00 PM",
   "deliveryRadius": 8.0,
   "freeDeliveryThreshold": 50,
   "deliveryCharge": 200,
@@ -465,6 +471,19 @@ Create a new branch.
   "restaurantId": "clxxx..."
 }
 ```
+
+**Validation:**
+- `name`: Required, min 2 characters
+- `address`: Required, min 5 characters
+- `phone`: Optional
+- `whatsappNumber`: Optional
+- `isOpen`: Optional, boolean (default: true)
+- `timing`: Optional, string
+- `deliveryRadius`: Optional, number
+- `freeDeliveryThreshold`: Optional, number
+- `deliveryCharge`: Optional, number
+- `deliveryOffTime`: Optional, string
+- `restaurantId`: Required, valid restaurant ID
 
 ---
 

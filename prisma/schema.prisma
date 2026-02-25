@@ -140,7 +140,10 @@ model Branch {
   id      String  @id @default(cuid())
   name    String
   address String
-  phone   String?
+  phone                 String?
+  whatsappNumber        String?  @map("whatsapp_number")
+  isOpen               Boolean  @default(true) @map("is_open")
+  timing               String?  // e.g., "9:00 AM - 11:00 PM"
 
   // Delivery Logic
   deliveryRadius        Float?   @map("delivery_radius") // in KM
