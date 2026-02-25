@@ -2270,6 +2270,229 @@ enum SubscriptionRequestStatus {
 
 ---
 
+## 20. Subscription Prices
+
+> Subscription Prices define the pricing tiers (FREE, BASIC, PREMIUM, ENTERPRISE) for restaurants. Each price entry includes a `features` array that lists the features included in that plan — useful for displaying plan comparison cards in the frontend.
+
+### 🔐 Access Control Summary
+
+| Action | Super Admin | Restaurant User |
+|--------|:-----------:|:---------------:|
+| GET all prices | ✅ (all restaurants) | ✅ (own restaurant only) |
+| GET single price | ✅ | ❌ |
+| POST create price | ✅ | ❌ |
+| PUT update price | ✅ | ❌ |
+| DELETE price | ✅ | ❌ |
+
+---
+
+### GET `/api/subscription-prices`
+Get all subscription price entries.
+
+**Authentication:** Required (Bearer Token)
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `restaurantId` | string | Optional | Filter by restaurant ID. Super Admins can pass any ID; regular users see their own restaurant only. |
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Operation successful",
+  "data": [
+    {
+      "id": "clxxx...",
+      "plan": "PREMIUM",
+      "price": "2999.00",
+      "billingCycle": "MONTHLY",
+      "isActive": true,
+      "features": [
+        "Unlimited Orders",
+        "Custom Domain",
+        "Priority Support",
+        "Advanced Analytics"
+      ],
+      "restaurantId": "clxxx...",
+      "restaurant": {
+        "id": "clxxx...",
+        "name": "Saif's Kitchen",
+        "slug": "saifs-kitchen"
+      },
+      "createdAt": "2026-02-25T10:00:00.000Z",
+      "updatedAt": "2026-02-25T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### POST `/api/subscription-prices`
+Create a new subscription price entry. **Super Admin only.**
+
+**Authentication:** Required (Bearer Token — Super Admin only)
+
+**Request Body:**
+```json
+{
+  "plan": "PREMIUM",
+  "price": 2999,
+  "billingCycle": "MONTHLY",
+  "isActive": true,
+  "features": [
+    "Unlimited Orders",
+    "Custom Domain",
+    "Priority Support",
+    "Advanced Analytics"
+  ],
+  "restaurantId": "clxxx..."
+}
+```
+
+**Field Validation:**
+
+| Field | Type | Required | Rules |
+|-------|------|----------|-------|
+| `plan` | enum | ✅ Yes | One of: `FREE`, `BASIC`, `PREMIUM`, `ENTERPRISE` |
+| `price` | number | ✅ Yes | Non-negative number |
+| `billingCycle` | string | ✅ Yes | e.g. `MONTHLY`, `YEARLY`. Defaults to `MONTHLY` |
+| `isActive` | boolean | ❌ Optional | Defaults to `true` |
+| `features` | string[] | ❌ Optional | Array of feature strings. Defaults to `[]` |
+| `restaurantId` | string | ✅ Yes | Valid restaurant ID |
+
+**Side Effect:**  
+After creating a price entry, the restaurant's `subscription`, `subStartDate`, and `subEndDate` fields are automatically updated.
+
+**Success Response (201):**
+```json
+{
+  "success": true,
+  "message": "Subscription price created successfully",
+  "data": {
+    "id": "clxxx...",
+    "plan": "PREMIUM",
+    "price": "2999.00",
+    "billingCycle": "MONTHLY",
+    "isActive": true,
+    "features": ["Unlimited Orders", "Custom Domain", "Priority Support"],
+    "restaurantId": "clxxx...",
+    "restaurant": {
+      "id": "clxxx...",
+      "name": "Saif's Kitchen",
+      "slug": "saifs-kitchen"
+    },
+    "createdAt": "2026-02-25T10:00:00.000Z",
+    "updatedAt": "2026-02-25T10:00:00.000Z"
+  }
+}
+```
+
+**Error Responses:**
+| Status | Message |
+|--------|---------|
+| `400` | Validation failed (with field-level errors) |
+| `403` | Unauthorized to create pricing for this restaurant |
+| `409` | A pricing entry for this plan and billing cycle already exists for this restaurant |
+| `500` | Failed to create subscription price |
+
+---
+
+### GET `/api/subscription-prices/[id]`
+Get a single subscription price entry by ID. **Super Admin only.**
+
+**Authentication:** Required (Bearer Token — Super Admin only)
+
+**Success Response (200):** Single subscription price object (same shape as GET list items).
+
+**Error Responses:**
+| Status | Message |
+|--------|---------|
+| `403` | Unauthorized to view this pricing |
+| `404` | Subscription price not found |
+| `500` | Failed to fetch subscription price |
+
+---
+
+### PUT `/api/subscription-prices/[id]`
+Update a subscription price entry. **Super Admin only.**
+
+**Authentication:** Required (Bearer Token — Super Admin only)
+
+**Request Body (all fields optional):**
+```json
+{
+  "plan": "ENTERPRISE",
+  "price": 5999,
+  "billingCycle": "YEARLY",
+  "isActive": true,
+  "features": [
+    "Unlimited Orders",
+    "Custom Domain",
+    "24/7 Dedicated Support",
+    "White-label App",
+    "Advanced Analytics"
+  ]
+}
+```
+
+**Field Validation:**
+
+| Field | Type | Required | Rules |
+|-------|------|----------|-------|
+| `plan` | enum | ❌ Optional | One of: `FREE`, `BASIC`, `PREMIUM`, `ENTERPRISE` |
+| `price` | number | ❌ Optional | Non-negative number |
+| `billingCycle` | string | ❌ Optional | e.g. `MONTHLY`, `YEARLY` |
+| `isActive` | boolean | ❌ Optional | — |
+| `features` | string[] | ❌ Optional | Array of feature strings. Passing this field **replaces** the existing features list. |
+
+**Side Effect:**  
+After updating, the restaurant's `subscription`, `subStartDate`, and `subEndDate` fields are automatically synced.
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Subscription price updated successfully",
+  "data": { ... }
+}
+```
+
+**Error Responses:**
+| Status | Message |
+|--------|---------|
+| `400` | Validation failed |
+| `403` | Unauthorized to update this pricing |
+| `404` | Subscription price not found |
+| `409` | A pricing entry for this plan and billing cycle already exists for this restaurant |
+| `500` | Failed to update subscription price |
+
+---
+
+### DELETE `/api/subscription-prices/[id]`
+Delete a subscription price entry. **Super Admin only.**
+
+**Authentication:** Required (Bearer Token — Super Admin only)
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Subscription price deleted successfully",
+  "data": null
+}
+```
+
+**Error Responses:**
+| Status | Message |
+|--------|---------|
+| `403` | Unauthorized to delete this pricing |
+| `404` | Subscription price not found |
+| `500` | Failed to delete subscription price |
+
+---
+
 ## Additional Resources
 
 - **Order Status Flow:** See `docs/ORDER_STATUS_FLOW.md`

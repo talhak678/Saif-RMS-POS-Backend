@@ -605,6 +605,7 @@ model SubscriptionPrice {
   price        Decimal     @db.Decimal(10, 2)
   billingCycle String      @default("MONTHLY") @map("billing_cycle") // e.g., "MONTHLY", "YEARLY"
   isActive     Boolean     @default(true) @map("is_active")
+  features     String[]    // e.g., ["Unlimited Orders", "24/7 Support", "Custom Domain"]
   restaurantId String      @map("restaurant_id")
   restaurant   Restaurant  @relation(fields: [restaurantId], references: [id])
   createdAt    DateTime    @default(now()) @map("created_at")

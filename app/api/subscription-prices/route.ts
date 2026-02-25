@@ -45,7 +45,7 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
             return errorResponse('Validation failed', validation.error.flatten().fieldErrors, 400)
         }
 
-        const { restaurantId, plan, price, billingCycle, isActive } = validation.data
+        const { restaurantId, plan, price, billingCycle, isActive, features } = validation.data
 
         // Only Super Admin can create pricing for any restaurant
         if (auth.role !== 'SUPER_ADMIN' && auth.restaurantId !== restaurantId) {
@@ -59,6 +59,7 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
                 price,
                 billingCycle,
                 isActive,
+                features: features ?? [],
             },
             include: {
                 restaurant: {
