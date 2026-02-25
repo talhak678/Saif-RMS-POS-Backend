@@ -45,7 +45,7 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
             return errorResponse('Validation failed', validation.error.flatten().fieldErrors, 400)
         }
 
-        const { restaurantId, plan, billingCycle, description } = validation.data
+        const { restaurantId, plan, billingCycle, description, contactName, contactEmail, contactPhone } = validation.data
 
         // Only Super Admin or User of the same restaurant can create a request
         if (auth.role !== 'SUPER_ADMIN' && auth.restaurantId !== restaurantId) {
@@ -58,6 +58,9 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
                 plan,
                 billingCycle,
                 description,
+                contactName,
+                contactEmail,
+                contactPhone,
             },
             include: {
                 restaurant: {
@@ -75,11 +78,10 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
             }
         })
 
-        const restaurantDetails = await prisma.restaurant.findUnique({
-            where: { id: restaurantId },
-            select: { phone: true, contactEmail: true, notificationEmail: true }
-        });
-        const contactInfo = `(Email: ${restaurantDetails?.contactEmail || restaurantDetails?.notificationEmail || 'N/A'}, Phone: ${restaurantDetails?.phone || 'N/A'})`;
+        const displayContact = contactName || "N/A";
+        const displayEmail = contactEmail || "N/A";
+        const displayPhone = contactPhone || "N/A";
+        const contactInfo = `(Contact: ${displayContact}, Email: ${displayEmail}, Phone: ${displayPhone})`;
 
         for (const admin of superAdmins) {
             await prisma.notification.create({

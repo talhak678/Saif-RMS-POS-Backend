@@ -65,6 +65,31 @@ export async function POST(req: NextRequest) {
             console.log(`Payment failed: ${failedIntent.id}`);
             break;
 
+        case "checkout.session.completed":
+            const session = event.data.object as Stripe.Checkout.Session;
+            if (session.metadata?.type === "subscription_payment") {
+                const { restaurantId, plan, billingCycle } = session.metadata;
+
+                const now = new Date();
+                const endDate = new Date(now);
+                if (billingCycle === "YEARLY") {
+                    endDate.setFullYear(now.getFullYear() + 1);
+                } else {
+                    endDate.setMonth(now.getMonth() + 1);
+                }
+
+                await prisma.restaurant.update({
+                    where: { id: restaurantId },
+                    data: {
+                        subscription: plan as any,
+                        subStartDate: now,
+                        subEndDate: endDate,
+                    }
+                });
+                console.log(`✅ Subscription updated for restaurant: ${restaurantId} to ${plan}`);
+            }
+            break;
+
         default:
             console.log(`Unhandled event type ${event.type}`);
     }

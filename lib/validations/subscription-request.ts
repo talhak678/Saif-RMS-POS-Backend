@@ -5,6 +5,9 @@ export const subscriptionRequestSchema = z.object({
     plan: z.enum(['FREE', 'BASIC', 'PREMIUM', 'ENTERPRISE']),
     billingCycle: z.enum(['MONTHLY', 'YEARLY']),
     description: z.string().optional(),
+    contactName: z.string().optional(),
+    contactEmail: z.string().email('Invalid email address').optional().or(z.literal('')),
+    contactPhone: z.string().optional(),
 });
 
 export const subscriptionRequestUpdateSchema = z.object({
