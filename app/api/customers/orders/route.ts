@@ -88,10 +88,6 @@ export async function POST(req: NextRequest) {
             return errorResponse('Invalid branch', null, 400)
         }
 
-
-
-
-
         // Validate discount code if provided
         let finalTotal = total
         let discountData = null

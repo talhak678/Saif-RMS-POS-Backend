@@ -24,6 +24,8 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
         }
 
         // Create Stripe Checkout Session
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3002";
+
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ["card"],
             line_items: [
@@ -40,8 +42,8 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
                 },
             ],
             mode: "payment",
-            success_url: `${process.env.NEXT_PUBLIC_APP_URL}/profile?payment=success`,
-            cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/profile?payment=cancel`,
+            success_url: `${appUrl}/profile?payment=success`,
+            cancel_url: `${appUrl}/profile?payment=cancel`,
             metadata: {
                 type: "subscription_payment",
                 restaurantId: restaurant.id,
@@ -54,6 +56,6 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
 
     } catch (error: any) {
         console.error("Subscription Checkout Error:", error);
-        return errorResponse("Failed to create checkout session", error.message, 500);
+        return errorResponse("Failed to create checkout session", error.message || "Unknown Stripe error", 500);
     }
 });
