@@ -88,35 +88,9 @@ export async function POST(req: NextRequest) {
             return errorResponse('Invalid branch', null, 400)
         }
 
-        // Check if delivery is available (based on time)
-        if (branch.deliveryOffTime && type === 'DELIVERY') {
-            const now = new Date()
-            const [offHour, offMin] = branch.deliveryOffTime.split(':').map(Number)
-            const offTime = new Date()
-            offTime.setHours(offHour, offMin, 0, 0)
-            if (now >= offTime) {
-                return errorResponse(
-                    `Delivery is not available after ${branch.deliveryOffTime}. Please try again tomorrow or choose pickup.`,
-                    null,
-                    400
-                )
-            }
-        }
 
-        // Check if delivery is available (based on time)
-        if (branch.deliveryOffTime && type === 'DELIVERY') {
-            const now = new Date()
-            const [offHour, offMin] = branch.deliveryOffTime.split(':').map(Number)
-            const offTime = new Date()
-            offTime.setHours(offHour, offMin, 0, 0)
-            if (now >= offTime) {
-                return errorResponse(
-                    `Delivery is not available after ${branch.deliveryOffTime}. Please try again tomorrow or choose pickup.`,
-                    null,
-                    400
-                )
-            }
-        }
+
+
 
         // Validate discount code if provided
         let finalTotal = total
