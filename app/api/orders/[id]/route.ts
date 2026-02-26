@@ -77,7 +77,14 @@ export const PUT = withAuth(async (req, { params, auth }) => {
 
         // 📧 Handle Email Notifications based on Status
         if (order.customer?.email && status) {
-            const { sendEmail, getOrderReadyTemplate, getOrderDeliveredTemplate } = await import('@/lib/email')
+            const {
+                sendEmail,
+                getOrderConfirmedTemplate,
+                getOrderReadyTemplate,
+                getOrderOutForDeliveryTemplate,
+                getOrderDeliveredTemplate,
+                getOrderCancelledTemplate
+            } = await import('@/lib/email')
             const restaurant = order.branch.restaurant as any;
             const restaurantName = restaurant.name;
             const customerName = order.customer.name || 'Customer';
@@ -96,19 +103,38 @@ export const PUT = withAuth(async (req, { params, auth }) => {
                 };
             }
 
-            if (status === 'KITCHEN_READY') {
+            let emailSubject = '';
+            let emailHtml = '';
+
+            switch (status) {
+                case 'CONFIRMED':
+                    emailSubject = `Order Confirmed! - ${restaurantName}`;
+                    emailHtml = getOrderConfirmedTemplate(customerName, order.orderNo.toString(), restaurantName);
+                    break;
+                case 'KITCHEN_READY':
+                    emailSubject = `Order Ready! - ${restaurantName}`;
+                    emailHtml = getOrderReadyTemplate(customerName, order.orderNo.toString(), restaurantName);
+                    break;
+                case 'OUT_FOR_DELIVERY':
+                    emailSubject = `Out for Delivery! - ${restaurantName}`;
+                    emailHtml = getOrderOutForDeliveryTemplate(customerName, order.orderNo.toString(), restaurantName);
+                    break;
+                case 'DELIVERED':
+                    emailSubject = `Order Delivered! - ${restaurantName}`;
+                    emailHtml = getOrderDeliveredTemplate(customerName, order.orderNo.toString(), restaurantName);
+                    break;
+                case 'CANCELLED':
+                    emailSubject = `Order Cancelled - ${restaurantName}`;
+                    // We can pass body.notes as reason if available
+                    emailHtml = getOrderCancelledTemplate(customerName, order.orderNo.toString(), restaurantName, body.notes);
+                    break;
+            }
+
+            if (emailHtml) {
                 await sendEmail({
                     to: order.customer.email,
-                    subject: `Order Ready! - ${restaurantName}`,
-                    html: getOrderReadyTemplate(customerName, order.orderNo.toString(), restaurantName),
-                    fromName: restaurantName,
-                    smtpConfig
-                })
-            } else if (status === 'DELIVERED') {
-                await sendEmail({
-                    to: order.customer.email,
-                    subject: `Order Delivered! - ${restaurantName}`,
-                    html: getOrderDeliveredTemplate(customerName, order.orderNo.toString(), restaurantName),
+                    subject: emailSubject,
+                    html: emailHtml,
                     fromName: restaurantName,
                     smtpConfig
                 })
