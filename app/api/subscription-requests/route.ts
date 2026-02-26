@@ -9,23 +9,29 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
         const { searchParams } = new URL(req.url)
         const restaurantId = searchParams.get('restaurantId')
 
-        // If not super admin, they can only see their own restaurant's requests
-        if (auth.role !== 'SUPER_ADMIN' && auth.restaurantId) {
-            if (restaurantId && restaurantId !== auth.restaurantId) {
-                return errorResponse('Unauthorized to view other restaurant requests', null, 403)
+        // Security check: If not super admin, they can ONLY see their own restaurant's requests
+        if (auth.role !== 'SUPER_ADMIN') {
+            if (!auth.restaurantId) {
+                return errorResponse('Restaurant ID not found for this user', null, 403)
             }
+            // Force filter to their own restaurant
+            const requests = await prisma.subscriptionRequest.findMany({
+                where: { restaurantId: auth.restaurantId },
+                include: {
+                    restaurant: { select: { id: true, name: true, slug: true } }
+                },
+                orderBy: { createdAt: 'desc' },
+            })
+            return successResponse(requests)
         }
 
-        const effectiveRestaurantId = auth.role === 'SUPER_ADMIN' ? restaurantId : auth.restaurantId
-
+        // For SUPER_ADMIN: Filter by provided restaurantId or show all
         const requests = await prisma.subscriptionRequest.findMany({
             where: {
-                ...(effectiveRestaurantId ? { restaurantId: effectiveRestaurantId } : {}),
+                ...(restaurantId ? { restaurantId: restaurantId } : {}),
             },
             include: {
-                restaurant: {
-                    select: { id: true, name: true, slug: true }
-                }
+                restaurant: { select: { id: true, name: true, slug: true } }
             },
             orderBy: { createdAt: 'desc' },
         })
@@ -36,7 +42,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
     }
 })
 
-export const POST = async (req: NextRequest) => {
+export const POST = withAuth(async (req: NextRequest, { auth }) => {
     try {
         const body = await req.json()
         const validation = subscriptionRequestSchema.safeParse(body)
@@ -45,7 +51,13 @@ export const POST = async (req: NextRequest) => {
             return errorResponse('Validation failed', validation.error.flatten().fieldErrors, 400)
         }
 
-        const { restaurantId, plan, billingCycle, description, contactName, contactEmail, contactPhone } = validation.data
+        const { plan, billingCycle, description, contactName, contactEmail, contactPhone } = validation.data
+
+        // Security check: Use the restaurantId from the logged-in user context
+        const restaurantId = auth.restaurantId;
+        if (!restaurantId) {
+            return errorResponse('User is not associated with any restaurant', null, 403)
+        }
 
         const subscriptionRequest = await prisma.subscriptionRequest.create({
             data: {
@@ -82,7 +94,7 @@ export const POST = async (req: NextRequest) => {
             await prisma.notification.create({
                 data: {
                     userId: admin.id,
-                    message: `New subscription upgrade request from "${subscriptionRequest.restaurant?.name || 'New Restaurant'}" for ${plan} plan (${billingCycle}). ${contactInfo}`,
+                    message: `New subscription upgrade request from "${(subscriptionRequest as any).restaurant?.name || 'New Restaurant'}" for ${plan} plan (${billingCycle}). ${contactInfo}`,
                     isRead: false
                 }
             })
@@ -92,4 +104,4 @@ export const POST = async (req: NextRequest) => {
     } catch (error: any) {
         return errorResponse('Failed to submit subscription request', error.message, 500)
     }
-}
+})
