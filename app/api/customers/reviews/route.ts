@@ -42,12 +42,21 @@ export async function GET(req: NextRequest) {
 
         const reviews = await prisma.review.findMany({
             where: {
-                order: {
-                    branch: restaurantSlug
-                        ? { restaurant: { slug: restaurantSlug } }
-                        : { restaurantId: restaurantId! }
-                },
-                ...(menuItemId ? { menuItemId } : {})
+                AND: [
+                    {
+                        order: {
+                            branch: restaurantSlug
+                                ? { restaurant: { slug: restaurantSlug } }
+                                : { restaurantId: restaurantId! }
+                        },
+                    },
+                    menuItemId ? {
+                        OR: [
+                            { menuItemId: menuItemId },
+                            { order: { items: { some: { menuItemId: menuItemId } } } }
+                        ]
+                    } : {}
+                ]
             },
             include: {
                 order: { include: { customer: { select: { name: true } } } },
