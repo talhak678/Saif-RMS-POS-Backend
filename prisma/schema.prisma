@@ -622,9 +622,9 @@ model SubscriptionPrice {
 
 model SubscriptionRequest {
   id           String        @id @default(cuid())
-  restaurantId String        @map("restaurant_id")
-  restaurant   Restaurant    @relation(fields: [restaurantId], references: [id])
-  plan         SubType
+  restaurantId String?        @map("restaurant_id")
+  restaurant   Restaurant?    @relation(fields: [restaurantId], references: [id])
+  plan         SubType?
   billingCycle String        @map("billing_cycle")
   description  String?
   contactName  String?       @map("contact_name")

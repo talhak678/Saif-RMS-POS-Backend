@@ -36,7 +36,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
     }
 })
 
-export const POST = withAuth(async (req: NextRequest, { auth }) => {
+export const POST = async (req: NextRequest) => {
     try {
         const body = await req.json()
         const validation = subscriptionRequestSchema.safeParse(body)
@@ -46,11 +46,6 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
         }
 
         const { restaurantId, plan, billingCycle, description, contactName, contactEmail, contactPhone } = validation.data
-
-        // Only Super Admin or User of the same restaurant can create a request
-        if (auth.role !== 'SUPER_ADMIN' && auth.restaurantId !== restaurantId) {
-            return errorResponse('Unauthorized to create request for this restaurant', null, 403)
-        }
 
         const subscriptionRequest = await prisma.subscriptionRequest.create({
             data: {
@@ -87,7 +82,7 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
             await prisma.notification.create({
                 data: {
                     userId: admin.id,
-                    message: `New subscription upgrade request from "${subscriptionRequest.restaurant.name}" for ${plan} plan (${billingCycle}). ${contactInfo}`,
+                    message: `New subscription upgrade request from "${subscriptionRequest.restaurant?.name || 'New Restaurant'}" for ${plan} plan (${billingCycle}). ${contactInfo}`,
                     isRead: false
                 }
             })
@@ -97,4 +92,4 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
     } catch (error: any) {
         return errorResponse('Failed to submit subscription request', error.message, 500)
     }
-})
+}

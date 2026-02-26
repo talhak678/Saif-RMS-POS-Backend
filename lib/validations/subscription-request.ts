@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const subscriptionRequestSchema = z.object({
-    restaurantId: z.string().min(1, 'Restaurant ID is required'),
+    restaurantId: z.string().min(1, 'Restaurant ID is required').optional(),
     plan: z.enum(['FREE', 'BASIC', 'PREMIUM', 'ENTERPRISE']),
     billingCycle: z.enum(['MONTHLY', 'YEARLY']),
     description: z.string().optional(),
