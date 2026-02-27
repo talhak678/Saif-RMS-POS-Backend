@@ -2,6 +2,7 @@ import prisma from '@/lib/prisma'
 import { successResponse, errorResponse } from '@/lib/api-response'
 import { NextRequest } from 'next/server'
 import { jwtVerify } from 'jose'
+import { getAuthContext } from '@/lib/auth'
 
 const SECRET_KEY = new TextEncoder().encode(
     process.env.JWT_SECRET || "default_secret_key_change_me"
@@ -31,10 +32,18 @@ async function getCustomerFromToken(req: NextRequest) {
 export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url)
-        const restaurantSlug = searchParams.get('slug')
-        const restaurantId = searchParams.get('restaurantId')
+        let restaurantSlug = searchParams.get('slug')
+        let restaurantId = searchParams.get('restaurantId')
         const menuItemId = searchParams.get('menuItemId')
         const limit = parseInt(searchParams.get('limit') || '20')
+
+        // 🚀 If no ID provided, try to get from Auth Context (Dashboard use-case)
+        if (!restaurantSlug && !restaurantId) {
+            const auth = await getAuthContext(req);
+            if (auth?.restaurantId) {
+                restaurantId = auth.restaurantId;
+            }
+        }
 
         if (!restaurantSlug && !restaurantId) {
             return errorResponse('Restaurant slug or restaurantId is required', null, 400)
