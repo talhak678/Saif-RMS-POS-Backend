@@ -42,7 +42,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
     }
 })
 
-export const POST = withAuth(async (req: NextRequest, { auth }) => {
+export const POST = async (req: NextRequest) => {
     try {
         const body = await req.json()
         const validation = subscriptionRequestSchema.safeParse(body)
@@ -51,13 +51,7 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
             return errorResponse('Validation failed', validation.error.flatten().fieldErrors, 400)
         }
 
-        const { plan, billingCycle, description, contactName, contactEmail, contactPhone } = validation.data
-
-        // Security check: Use the restaurantId from the logged-in user context
-        const restaurantId = auth.restaurantId;
-        if (!restaurantId) {
-            return errorResponse('User is not associated with any restaurant', null, 403)
-        }
+        const { restaurantId, plan, billingCycle, description, contactName, contactEmail, contactPhone } = validation.data
 
         const subscriptionRequest = await prisma.subscriptionRequest.create({
             data: {
@@ -104,4 +98,4 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
     } catch (error: any) {
         return errorResponse('Failed to submit subscription request', error.message, 500)
     }
-})
+}
