@@ -29,9 +29,9 @@ export const websiteConfigSchema = z.object({
 })
 
 export const blogPostSchema = z.object({
-    title: z.string().min(5, 'Title must be at least 5 characters'),
+    title: z.string().min(2, 'Title must be at least 2 characters'),
     snippet: z.string().optional(),
-    content: z.string().min(20, 'Content must be at least 20 characters'),
+    content: z.string().min(5, 'Content must be at least 5 characters'),
     imageUrl: z.string().optional().refine((val) => !val || val === '' || z.string().url().safeParse(val).success, {
         message: 'Must be a valid URL or empty'
     }),

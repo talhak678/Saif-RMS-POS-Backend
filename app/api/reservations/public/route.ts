@@ -51,10 +51,13 @@ export async function POST(req: NextRequest) {
                 timeStyle: 'short'
             })
 
+            const customerEmail = body.email || 'N/A';
+            const customerMsg = body.message ? `\nMessage: ${body.message}` : '';
+
             await prisma.notification.createMany({
                 data: admins.map(admin => ({
                     userId: admin.id,
-                    message: `New Reservation: ${customerName} has booked a table for ${formattedTime} at ${reservation.branch.name}.`,
+                    message: `New Table Booking: ${customerName} (${customerEmail}) has reserved a table for ${formattedTime} at ${reservation.branch.name}.${customerMsg}`,
                     isRead: false
                 }))
             })
