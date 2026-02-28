@@ -33,13 +33,25 @@ export const POST = withAuth(async (req: NextRequest) => {
             return errorResponse('Validation failed', validation.error.flatten().fieldErrors, 400)
         }
 
-        const restaurant = await prisma.restaurant.create({
-            data: validation.data
-        })
+        const data = {
+            ...validation.data,
+            // Ensure empty string becomes null so unique constraint isn't falsely triggered
+            customDomain: validation.data.customDomain?.trim() || null,
+        }
+
+        const restaurant = await prisma.restaurant.create({ data })
 
         return successResponse(restaurant, 'Restaurant created successfully', 201)
     } catch (error: any) {
-        if (error.code === 'P2002') return errorResponse('Restaurant slug already exists')
+        if (error.code === 'P2002') {
+            const field = error.meta?.target?.[0] || error.meta?.target || 'field'
+            const messages: Record<string, string> = {
+                slug: 'Restaurant slug already exists. Please choose a different slug.',
+                custom_domain: 'This custom domain is already in use.',
+            }
+            const message = messages[field] || `A restaurant with this ${field} already exists.`
+            return errorResponse(message, { conflictField: field }, 409)
+        }
         return errorResponse('Failed to create restaurant', error.message, 500)
     }
 }, { roles: ['SUPER_ADMIN'] }) // Only super admins can create new restaurants
