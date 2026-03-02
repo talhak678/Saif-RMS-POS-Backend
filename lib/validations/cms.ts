@@ -1,15 +1,15 @@
 import { z } from 'zod'
 
 export const faqSchema = z.object({
-    question: z.string().min(5, 'Question must be at least 5 characters'),
-    answer: z.string().min(5, 'Answer must be at least 5 characters'),
+    question: z.string().min(1, 'Question is required'),
+    answer: z.string().min(1, 'Answer is required'),
     restaurantId: z.string().cuid('Invalid restaurant ID'),
 })
 
 export const cmsPageSchema = z.object({
-    title: z.string().min(2, 'Title must be at least 2 characters'),
-    slug: z.string().min(2, 'Slug must be at least 2 characters'),
-    content: z.string().min(10, 'Content must be at least 10 characters'),
+    title: z.string().min(1, 'Title is required'),
+    slug: z.string().min(1, 'Slug is required'),
+    content: z.string().min(1, 'Content is required'),
     restaurantId: z.string().cuid('Invalid restaurant ID'),
 })
 
@@ -29,9 +29,9 @@ export const websiteConfigSchema = z.object({
 })
 
 export const blogPostSchema = z.object({
-    title: z.string().min(2, 'Title must be at least 2 characters'),
+    title: z.string().min(1, 'Title is required'),
     snippet: z.string().optional(),
-    content: z.string().min(5, 'Content must be at least 5 characters'),
+    content: z.string().min(1, 'Content is required'),
     imageUrl: z.string().optional().refine((val) => !val || val === '' || z.string().url().safeParse(val).success, {
         message: 'Must be a valid URL or empty'
     }),
