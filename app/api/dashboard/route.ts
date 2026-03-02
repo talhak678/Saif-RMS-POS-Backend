@@ -27,17 +27,207 @@ function getPeriodDates(period: string): { start: Date; end: Date; prevStart: Da
     return { start, end, prevStart, prevEnd }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Super Admin platform-wide overview
+// ─────────────────────────────────────────────────────────────────────────────
+async function getSuperAdminDashboard(period: string) {
+    const { start, end, prevStart, prevEnd } = getPeriodDates(period)
+
+    const growth = (curr: number, prev: number) =>
+        prev === 0 ? null : Math.round(((curr - prev) / prev) * 100)
+
+    // ── 1. Restaurant counts by status ───────────────────────────────────────
+    const [totalRestaurants, activeRestaurants, pendingRestaurants, suspendedRestaurants] =
+        await Promise.all([
+            prisma.restaurant.count(),
+            prisma.restaurant.count({ where: { status: 'ACTIVE' } }),
+            prisma.restaurant.count({ where: { status: 'PENDING' } }),
+            prisma.restaurant.count({ where: { status: 'SUSPENDED' } }),
+        ])
+
+    // ── 2. Restaurants by subscription plan ──────────────────────────────────
+    const planGroups = await prisma.restaurant.groupBy({
+        by: ['subscription'],
+        _count: { id: true },
+    })
+    const restaurantsByPlan = planGroups.reduce((acc: any, g) => {
+        acc[g.subscription] = g._count.id
+        return acc
+    }, {})
+
+    // ── 3. Subscription revenue from SubscriptionPrice table ─────────────────
+    const subscriptionPrices = await (prisma as any).subscriptionPrice.findMany({
+        where: { isActive: true },
+        include: {
+            restaurant: { select: { id: true, name: true, slug: true, subscription: true } },
+        },
+        orderBy: { price: 'desc' },
+    })
+
+    const totalSubscriptionRevenue = subscriptionPrices.reduce(
+        (sum: number, sp: any) => sum + Number(sp.price),
+        0
+    )
+
+    const subscriptionRevenue = subscriptionPrices.map((sp: any) => ({
+        restaurantId: sp.restaurantId,
+        restaurantName: sp.restaurant?.name,
+        plan: sp.plan,
+        billingCycle: sp.billingCycle,
+        price: Number(sp.price),
+        features: sp.features ?? [],
+    }))
+
+    // ── 4. Platform-wide order revenue (current + prev period) ───────────────
+    const [platformRevenueData, prevPlatformRevenueData, platformOrderCount, prevPlatformOrderCount] =
+        await Promise.all([
+            prisma.order.aggregate({
+                where: {
+                    createdAt: { gte: start, lte: end },
+                    payment: { status: PaymentStatus.PAID },
+                },
+                _sum: { total: true },
+            }),
+            prisma.order.aggregate({
+                where: {
+                    createdAt: { gte: prevStart, lte: prevEnd },
+                    payment: { status: PaymentStatus.PAID },
+                },
+                _sum: { total: true },
+            }),
+            prisma.order.count({ where: { createdAt: { gte: start, lte: end } } }),
+            prisma.order.count({ where: { createdAt: { gte: prevStart, lte: prevEnd } } }),
+        ])
+
+    const platformRevenue = Number(platformRevenueData._sum.total || 0)
+    const prevPlatformRevenue = Number(prevPlatformRevenueData._sum.total || 0)
+
+    // ── 5. Monthly sales trend – last 12 months (platform-wide) ──────────────
+    const twelveMonthsAgo = new Date()
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11)
+    twelveMonthsAgo.setDate(1)
+    twelveMonthsAgo.setHours(0, 0, 0, 0)
+
+    const monthlyOrders = await prisma.order.findMany({
+        where: {
+            createdAt: { gte: twelveMonthsAgo },
+            payment: { status: PaymentStatus.PAID },
+        },
+        select: { total: true, createdAt: true },
+    })
+
+    const monthlyMap: Record<string, number> = {}
+    const monthlyCountMap: Record<string, number> = {}
+    monthlyOrders.forEach((o) => {
+        const key = `${o.createdAt.getFullYear()}-${String(o.createdAt.getMonth() + 1).padStart(2, '0')}`
+        monthlyMap[key] = (monthlyMap[key] || 0) + Number(o.total)
+        monthlyCountMap[key] = (monthlyCountMap[key] || 0) + 1
+    })
+
+    const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    const monthlySalesTrend = Array.from({ length: 12 }, (_, i) => {
+        const d = new Date(twelveMonthsAgo)
+        d.setMonth(d.getMonth() + i)
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+        return {
+            month: monthLabels[d.getMonth()],
+            revenue: Math.round(monthlyMap[key] || 0),
+            orders: monthlyCountMap[key] || 0,
+        }
+    })
+
+    // ── 6. Top 5 restaurants by revenue in period ─────────────────────────────
+    // Group orders by branch → restaurant
+    const branchRevRaw = await prisma.order.groupBy({
+        by: ['branchId'],
+        where: {
+            createdAt: { gte: start, lte: end },
+            payment: { status: PaymentStatus.PAID },
+        },
+        _sum: { total: true },
+        _count: { id: true },
+        orderBy: { _sum: { total: 'desc' } },
+        take: 20,
+    })
+
+    // Map branch → restaurant
+    const topRestaurantMap: Record<string, { name: string; revenue: number; orders: number }> = {}
+    await Promise.all(
+        branchRevRaw.map(async (item) => {
+            const branch = await prisma.branch.findUnique({
+                where: { id: item.branchId },
+                include: { restaurant: { select: { id: true, name: true } } },
+            })
+            if (!branch?.restaurant) return
+            const rid = branch.restaurant.id
+            if (!topRestaurantMap[rid]) {
+                topRestaurantMap[rid] = { name: branch.restaurant.name, revenue: 0, orders: 0 }
+            }
+            topRestaurantMap[rid].revenue += Number(item._sum.total || 0)
+            topRestaurantMap[rid].orders += item._count.id
+        })
+    )
+
+    const topRestaurantsByRevenue = Object.entries(topRestaurantMap)
+        .map(([id, v]) => ({ id, ...v, revenue: Math.round(v.revenue) }))
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 5)
+
+    // ── 7. Recently added restaurants ─────────────────────────────────────────
+    const recentRestaurants = await prisma.restaurant.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        select: { id: true, name: true, slug: true, status: true, subscription: true, createdAt: true },
+    })
+
+    // ── 8. Total users count ──────────────────────────────────────────────────
+    const totalUsers = await prisma.user.count()
+
+    return {
+        period,
+        // Restaurant overview
+        totalRestaurants,
+        activeRestaurants,
+        pendingRestaurants,
+        suspendedRestaurants,
+        restaurantsByPlan,
+        // Subscription revenue
+        totalSubscriptionRevenue: Math.round(totalSubscriptionRevenue),
+        subscriptionRevenue,
+        // Platform sales
+        platformRevenue: Math.round(platformRevenue),
+        platformOrders: platformOrderCount,
+        growth: {
+            revenue: growth(platformRevenue, prevPlatformRevenue),
+            orders: growth(platformOrderCount, prevPlatformOrderCount),
+        },
+        // Trends
+        monthlySalesTrend,
+        topRestaurantsByRevenue,
+        recentRestaurants,
+        totalUsers,
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main handler
+// ─────────────────────────────────────────────────────────────────────────────
 export const GET = withAuth(async (req: NextRequest, { auth }) => {
     try {
         const { searchParams } = new URL(req.url)
-        const branchId = searchParams.get('branchId')
         const period = searchParams.get('period') || '30d'
+        const branchId = searchParams.get('branchId')
 
-        let restaurantId = auth.restaurantId;
+        // ── Super Admin with no restaurantId filter → platform overview ───────
+        if (auth.role === 'SUPER_ADMIN' && !searchParams.get('restaurantId')) {
+            const data = await getSuperAdminDashboard(period)
+            return successResponse(data)
+        }
+
+        // ── Per-restaurant dashboard (same as before) ─────────────────────────
+        let restaurantId = auth.restaurantId
         if (auth.role === 'SUPER_ADMIN') {
-            const queryRestId = searchParams.get('restaurantId')
-            if (queryRestId) restaurantId = queryRestId;
-            else restaurantId = undefined;
+            restaurantId = searchParams.get('restaurantId') ?? undefined
         }
 
         const { start, end, prevStart, prevEnd } = getPeriodDates(period)
@@ -50,7 +240,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
         const baseWhere: any = { createdAt: { gte: start, lte: end }, ...tenantFilter }
         const prevWhere: any = { createdAt: { gte: prevStart, lte: prevEnd }, ...tenantFilter }
 
-        // ── 1. Current period revenue (paid orders) ──────────────────────────
+        // ── 1. Revenue ────────────────────────────────────────────────────────
         const [revenueData, prevRevenueData, salesData, prevSalesData] = await Promise.all([
             prisma.order.aggregate({
                 where: { ...baseWhere, payment: { status: PaymentStatus.PAID } },
@@ -60,18 +250,11 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
                 where: { ...prevWhere, payment: { status: PaymentStatus.PAID } },
                 _sum: { total: true },
             }),
-            // Total Sales = ALL orders (paid + unpaid + pending)
-            prisma.order.aggregate({
-                where: baseWhere,
-                _sum: { total: true },
-            }),
-            prisma.order.aggregate({
-                where: prevWhere,
-                _sum: { total: true },
-            }),
+            prisma.order.aggregate({ where: baseWhere, _sum: { total: true } }),
+            prisma.order.aggregate({ where: prevWhere, _sum: { total: true } }),
         ])
 
-        // ── 2. Total Orders with comparison ──────────────────────────────────
+        // ── 2. Orders ─────────────────────────────────────────────────────────
         const [totalOrders, prevTotalOrders] = await Promise.all([
             prisma.order.count({ where: baseWhere }),
             prisma.order.count({ where: prevWhere }),
@@ -84,10 +267,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
         ])
 
         // ── 4. Avg Order Value ────────────────────────────────────────────────
-        const avgData = await prisma.order.aggregate({
-            where: baseWhere,
-            _avg: { total: true },
-        })
+        const avgData = await prisma.order.aggregate({ where: baseWhere, _avg: { total: true } })
 
         // ── 5. Customers ──────────────────────────────────────────────────────
         const [newCustomers, prevNewCustomers, totalCustomers] = await Promise.all([
@@ -97,33 +277,17 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
             prisma.customer.count({
                 where: { createdAt: { gte: prevStart, lte: prevEnd }, ...(restaurantId ? { restaurantId } : {}) },
             }),
-            prisma.customer.count({
-                where: { ...(restaurantId ? { restaurantId } : {}) },
-            }),
+            prisma.customer.count({ where: restaurantId ? { restaurantId } : {} }),
         ])
 
-        // ── 6. Order Status Breakdown ─────────────────────────────────────────
-        const statusGrouped = await prisma.order.groupBy({
-            by: ['status'],
-            where: baseWhere,
-            _count: { id: true },
-        })
+        // ── 6. Status / Source / Type breakdown ───────────────────────────────
+        const [statusGrouped, sourceGrouped, typeGrouped] = await Promise.all([
+            prisma.order.groupBy({ by: ['status'], where: baseWhere, _count: { id: true } }),
+            prisma.order.groupBy({ by: ['source'], where: baseWhere, _count: { id: true } }),
+            prisma.order.groupBy({ by: ['type'], where: baseWhere, _count: { id: true } }),
+        ])
 
-        // ── 7. Orders by Source ───────────────────────────────────────────────
-        const sourceGrouped = await prisma.order.groupBy({
-            by: ['source'],
-            where: baseWhere,
-            _count: { id: true },
-        })
-
-        // ── 8. Orders by Type (DINE_IN, DELIVERY, PICKUP) ────────────────────
-        const typeGrouped = await prisma.order.groupBy({
-            by: ['type'],
-            where: baseWhere,
-            _count: { id: true },
-        })
-
-        // ── 9. Top Selling Items ──────────────────────────────────────────────
+        // ── 7. Top Selling Items ──────────────────────────────────────────────
         const topItems = await prisma.orderItem.groupBy({
             by: ['menuItemId'],
             where: { order: baseWhere },
@@ -141,7 +305,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
             })
         )
 
-        // ── 10. Monthly Sales (last 12 months, always full year) ─────────────
+        // ── 8. Monthly Sales (last 12 months) ─────────────────────────────────
         const twelveMonthsAgo = new Date()
         twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11)
         twelveMonthsAgo.setDate(1)
@@ -176,18 +340,17 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
             }
         })
 
-        // ── 11. Hourly Orders (today) ─────────────────────────────────────────
+        // ── 9. Hourly Orders (today) ──────────────────────────────────────────
         const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
         const todayOrders = await prisma.order.findMany({
             where: { ...tenantFilter, createdAt: { gte: todayStart } },
             select: { createdAt: true },
         })
-
         const hourlyMap: number[] = Array(24).fill(0)
         todayOrders.forEach((o) => { hourlyMap[o.createdAt.getHours()]++ })
         const hourlyOrders = hourlyMap.map((count, h) => ({ hour: `${h}:00`, count }))
 
-        // ── 12. Category Revenue ──────────────────────────────────────────────
+        // ── 10. Category Revenue ──────────────────────────────────────────────
         const categoryRevRaw = await prisma.orderItem.groupBy({
             by: ['menuItemId'],
             where: { order: baseWhere },
@@ -213,7 +376,7 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
             .sort((a, b) => b.revenue - a.revenue)
             .slice(0, 6)
 
-        // ── 13. Recent Reviews ────────────────────────────────────────────────
+        // ── 11. Recent Reviews ────────────────────────────────────────────────
         const recentReviews = await prisma.review.findMany({
             where: { order: { ...tenantFilter } },
             orderBy: { createdAt: 'desc' },
@@ -223,14 +386,14 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
             },
         })
 
-        // ── 14. Growth helpers ────────────────────────────────────────────────
+        // ── 12. Growth helpers ────────────────────────────────────────────────
         const growth = (curr: number, prev: number) =>
             prev === 0 ? null : Math.round(((curr - prev) / prev) * 100)
 
         const dashboardData = {
             period,
-            totalSales: salesData._sum.total || 0,        // ALL orders (any status)
-            totalRevenue: revenueData._sum.total || 0,     // Paid orders only
+            totalSales: salesData._sum.total || 0,
+            totalRevenue: revenueData._sum.total || 0,
             totalOrders,
             websiteOrders,
             avgOrderValue: avgData._avg.total || 0,

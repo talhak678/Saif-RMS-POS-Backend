@@ -1803,46 +1803,142 @@ Delete notification.
 ## 16. Dashboard Analytics
 
 ### GET `/api/dashboard`
-Get analytics and KPIs. Defaults to the last 30 days if no range is specified.
+Smart dashboard endpoint — returns **different data depending on the caller's role and query params**.
+
+**Authentication:** Required (Bearer Token)
 
 **Query Parameters:**
-- `restaurantId` (optional) - Filter by restaurant
-- `branchId` (optional) - Filter by branch
-- `startDate` (optional) - Filter by start date (YYYY-MM-DD or ISO format)
-- `endDate` (optional) - Filter by end date (YYYY-MM-DD or ISO format)
 
-**Response:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `period` | string | Time range: `today`, `7d`, `30d` (default), `90d` |
+| `restaurantId` | string | Super Admin only — filter to a specific restaurant |
+| `branchId` | string | Filter to a specific branch (per-restaurant mode only) |
+
+---
+
+### 🔑 Mode 1 — Super Admin Overview (no `restaurantId` passed)
+
+When a **Super Admin** calls `/api/dashboard` **without** `?restaurantId=`, they receive **platform-wide metrics**.
+
+**Success Response (200):**
 ```json
 {
   "success": true,
   "data": {
-    "totalRevenue": 125000,
-    "totalOrders": 450,
-    "newCustomers": 35,
-    "statusBreakdown": {
-      "PENDING": 5,
-      "CONFIRMED": 8,
-      "PREPARING": 12,
-      "DELIVERED": 380,
-      "CANCELLED": 10
+    "period": "30d",
+    "totalRestaurants": 24,
+    "activeRestaurants": 18,
+    "pendingRestaurants": 4,
+    "suspendedRestaurants": 2,
+    "restaurantsByPlan": {
+      "FREE": 8,
+      "BASIC": 7,
+      "PREMIUM": 6,
+      "ENTERPRISE": 3
     },
+    "totalSubscriptionRevenue": 187500,
+    "subscriptionRevenue": [
+      {
+        "restaurantId": "clxxx...",
+        "restaurantName": "Saif's Kitchen",
+        "plan": "PREMIUM",
+        "billingCycle": "MONTHLY",
+        "price": 2999,
+        "features": ["Unlimited Orders", "Custom Domain"]
+      }
+    ],
+    "platformRevenue": 4250000,
+    "platformOrders": 1850,
+    "growth": {
+      "revenue": 12,
+      "orders": 8
+    },
+    "monthlySalesTrend": [
+      { "month": "Apr", "revenue": 280000, "orders": 120 },
+      { "month": "May", "revenue": 310000, "orders": 145 }
+    ],
+    "topRestaurantsByRevenue": [
+      { "id": "clxxx...", "name": "Saif's Kitchen", "revenue": 480000, "orders": 210 }
+    ],
+    "recentRestaurants": [
+      {
+        "id": "clxxx...",
+        "name": "New Bistro",
+        "slug": "new-bistro",
+        "status": "PENDING",
+        "subscription": "FREE",
+        "createdAt": "2026-03-01T10:00:00.000Z"
+      }
+    ],
+    "totalUsers": 87
+  }
+}
+```
+
+> **Subscription revenue** comes from real data in the `SubscriptionPrice` table (set by Super Admin), not static enum values.
+
+---
+
+### 🍽️ Mode 2 — Per-Restaurant Dashboard
+
+All non-Super-Admin roles always receive this. A Super Admin passing `?restaurantId=<id>` also gets this mode.
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "period": "30d",
+    "totalSales": 280000,
+    "totalRevenue": 250000,
+    "totalOrders": 120,
+    "websiteOrders": 35,
+    "avgOrderValue": 2333,
+    "newCustomers": 18,
+    "totalCustomers": 210,
+    "growth": {
+      "totalSales": 14,
+      "revenue": 12,
+      "orders": 8,
+      "websiteOrders": 22,
+      "newCustomers": -5
+    },
+    "statusBreakdown": {
+      "PENDING": 3,
+      "CONFIRMED": 5,
+      "PREPARING": 8,
+      "DELIVERED": 100,
+      "CANCELLED": 4
+    },
+    "sourceBreakdown": { "POS": 85, "WEBSITE": 35 },
+    "typeBreakdown": { "DINE_IN": 60, "DELIVERY": 40, "PICKUP": 20 },
     "topItems": [
+      { "name": "Biryani", "quantity": 85 }
+    ],
+    "monthlySales": [
+      { "month": "Apr", "revenue": 180000, "orders": 75 }
+    ],
+    "hourlyOrders": [
+      { "hour": "12:00", "count": 18 }
+    ],
+    "categoryRevenue": [
+      { "name": "Fast Food", "revenue": 95000, "quantity": 420 }
+    ],
+    "recentReviews": [
       {
-        "menuItemId": "clxxx...",
-        "name": "Biryani",
-        "totalSold": 85,
-        "revenue": 68000
-      },
-      {
-        "menuItemId": "clxxx...",
-        "name": "Chicken Karahi",
-        "totalSold": 62,
-        "revenue": 74400
+        "id": "clxxx...",
+        "rating": 5,
+        "comment": "Excellent!",
+        "customerName": "Ahmed Ali",
+        "createdAt": "2026-03-01T14:00:00.000Z"
       }
     ]
   }
 }
 ```
+
+**Growth values** are percentage changes vs. the previous equivalent period (e.g., previous 30 days). `null` means no previous data to compare.
 
 ---
 
