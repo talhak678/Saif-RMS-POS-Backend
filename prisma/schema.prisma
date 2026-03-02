@@ -61,6 +61,7 @@ model Restaurant {
   name         String
   slug         String     @unique
   customDomain String?    @unique @map("custom_domain")
+  domainStatus DomainStatus @default(NONE) @map("domain_status")
   logo         String?
   description  String?
   status       RestStatus @default(PENDING)
@@ -127,6 +128,13 @@ enum RestStatus {
   PENDING
   ACTIVE
   SUSPENDED
+}
+
+enum DomainStatus {
+  NONE
+  PENDING
+  VERIFIED
+  FAILED
 }
 
 enum SubType {

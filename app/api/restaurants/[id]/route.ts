@@ -2,7 +2,7 @@ import prisma from '@/lib/prisma'
 import { successResponse, errorResponse } from '@/lib/api-response'
 import { NextRequest } from 'next/server'
 import { restaurantSchema } from '@/lib/validations/restaurant'
-import { addDomainToVercel } from '@/lib/vercel'
+import { addDomainToVercel, removeDomainFromVercel } from '@/lib/vercel'
 
 export async function GET(
     req: NextRequest,
@@ -38,7 +38,7 @@ export async function PUT(
         // 1. Fetch current restaurant to check if domain changed
         const currentRestaurant = await prisma.restaurant.findUnique({
             where: { id },
-            select: { customDomain: true }
+            select: { customDomain: true, domainStatus: true }
         })
 
         const validation = restaurantSchema.safeParse(body)
@@ -47,16 +47,54 @@ export async function PUT(
             return errorResponse('Validation failed', validation.error.flatten().fieldErrors, 400)
         }
 
-        // 2. Update DB
+        const newDomain = validation.data.customDomain?.toLowerCase().trim().replace(/^(https?:\/\/)/, '').replace(/\/$/, '') || null;
+        const oldDomain = currentRestaurant?.customDomain || null;
+        const domainChanged = newDomain !== oldDomain;
+
+        // Prepare update data
+        const updateData: any = { ...validation.data };
+
+        // Handle domain changes
+        if (domainChanged) {
+            if (newDomain) {
+                // Clean domain: remove protocol, trailing slashes
+                updateData.customDomain = newDomain;
+                updateData.domainStatus = 'PENDING';
+            } else {
+                // Domain removed
+                updateData.customDomain = null;
+                updateData.domainStatus = 'NONE';
+            }
+        }
+
+        // 2. Update DB first
         const restaurant = await prisma.restaurant.update({
             where: { id },
-            data: validation.data
+            data: updateData
         })
 
-        // 3. Automatic Vercel Connection (if domain changed and exists)
-        if (validation.data.customDomain && validation.data.customDomain !== currentRestaurant?.customDomain) {
-            console.log('🌐 Domain change detected, triggering Vercel API...');
-            await addDomainToVercel(validation.data.customDomain);
+        // 3. Handle Vercel domain changes (after DB update succeeds)
+        if (domainChanged) {
+            // Remove old domain from Vercel if it existed
+            if (oldDomain) {
+                console.log(`🗑️ Removing old domain from Vercel: ${oldDomain}`);
+                await removeDomainFromVercel(oldDomain);
+            }
+
+            // Add new domain to Vercel if provided
+            if (newDomain) {
+                console.log('🌐 Adding new domain to Vercel:', newDomain);
+                const result = await addDomainToVercel(newDomain);
+
+                if (result && !result.success) {
+                    // Domain add failed, update status to FAILED
+                    await prisma.restaurant.update({
+                        where: { id },
+                        data: { domainStatus: 'FAILED' }
+                    });
+                    console.error('💥 Failed to add domain to Vercel:', result.error);
+                }
+            }
         }
 
         return successResponse(restaurant, 'Restaurant updated successfully')

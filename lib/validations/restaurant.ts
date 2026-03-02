@@ -12,6 +12,7 @@ export const restaurantSchema = z.object({
     tiktokUrl: z.string().url().optional().or(z.literal('')).nullable(),
     metaPixelId: z.string().optional().nullable(),
     customDomain: z.string().optional().or(z.literal('')).nullable(),
+    domainStatus: z.enum(['NONE', 'PENDING', 'VERIFIED', 'FAILED']).optional().default('NONE'),
     smtpHost: z.string().nullable().optional().or(z.literal('')),
     smtpPort: z.any().optional().transform(v => {
         if (v === null || v === "" || v === undefined) return undefined;
