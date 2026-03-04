@@ -66,7 +66,9 @@ export const PUT = withAuth(async (req, { params, auth }) => {
             },
             include: {
                 payment: true,
-                items: true,
+                items: {
+                    include: { menuItem: true }
+                },
                 customer: true,
                 rider: true,
                 branch: {
@@ -88,6 +90,9 @@ export const PUT = withAuth(async (req, { params, auth }) => {
             const restaurant = order.branch.restaurant as any;
             const restaurantName = restaurant.name;
             const customerName = order.customer.name || 'Customer';
+            const items = order.items;
+            const total = Number(order.total);
+            const deliveryCharge = Number(order.deliveryCharge || 0);
 
             // Check if restaurant has custom SMTP settings
             let smtpConfig = undefined;
@@ -109,24 +114,24 @@ export const PUT = withAuth(async (req, { params, auth }) => {
             switch (status) {
                 case 'CONFIRMED':
                     emailSubject = `Order Confirmed! - ${restaurantName}`;
-                    emailHtml = getOrderConfirmedTemplate(customerName, order.orderNo.toString(), restaurantName);
+                    emailHtml = getOrderConfirmedTemplate(customerName, order.orderNo.toString(), restaurantName, items, total, deliveryCharge);
                     break;
                 case 'KITCHEN_READY':
                     emailSubject = `Order Ready! - ${restaurantName}`;
-                    emailHtml = getOrderReadyTemplate(customerName, order.orderNo.toString(), restaurantName);
+                    emailHtml = getOrderReadyTemplate(customerName, order.orderNo.toString(), restaurantName, items, total, deliveryCharge);
                     break;
                 case 'OUT_FOR_DELIVERY':
                     emailSubject = `Out for Delivery! - ${restaurantName}`;
-                    emailHtml = getOrderOutForDeliveryTemplate(customerName, order.orderNo.toString(), restaurantName);
+                    emailHtml = getOrderOutForDeliveryTemplate(customerName, order.orderNo.toString(), restaurantName, items, total, deliveryCharge);
                     break;
                 case 'DELIVERED':
                     emailSubject = `Order Delivered! - ${restaurantName}`;
-                    emailHtml = getOrderDeliveredTemplate(customerName, order.orderNo.toString(), restaurantName);
+                    emailHtml = getOrderDeliveredTemplate(customerName, order.orderNo.toString(), restaurantName, items, total, deliveryCharge);
                     break;
                 case 'CANCELLED':
                     emailSubject = `Order Cancelled - ${restaurantName}`;
                     // We can pass body.notes as reason if available
-                    emailHtml = getOrderCancelledTemplate(customerName, order.orderNo.toString(), restaurantName, body.notes);
+                    emailHtml = getOrderCancelledTemplate(customerName, order.orderNo.toString(), restaurantName, items, total, deliveryCharge, body.notes);
                     break;
             }
 

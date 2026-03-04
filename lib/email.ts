@@ -55,8 +55,44 @@ export async function sendEmail({ to, subject, text, html, fromName, smtpConfig 
     }
 }
 
+// 📋 Helper to format order items table
+function getOrderDetailsTable(items: any[], total: number, deliveryCharge: number) {
+    const itemsHtml = items.map(item => `
+        <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #eee;">
+                <strong>${item.menuItem?.name || item.name || 'Item'}</strong><br>
+                <span style="font-size: 12px; color: #888;">Qty: ${item.quantity} × Rs. ${item.price}</span>
+            </td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #eee; text-align: right;">
+                Rs. ${item.price * item.quantity}
+            </td>
+        </tr>
+    `).join('');
+
+    return `
+        <div style="margin: 20px 0; border-top: 2px solid #eee; padding-top: 20px;">
+            <h4 style="margin: 0 0 15px 0; text-transform: uppercase; font-size: 12px; color: #888; letter-spacing: 1px;">Order Details</h4>
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                ${itemsHtml}
+                <tr>
+                    <td style="padding: 15px 0 5px 0;">Subtotal</td>
+                    <td style="padding: 15px 0 5px 0; text-align: right;">Rs. ${total}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 5px 0 15px 0; border-bottom: 2px solid #eee;">Delivery Fee</td>
+                    <td style="padding: 5px 0 15px 0; border-bottom: 2px solid #eee; text-align: right;">Rs. ${deliveryCharge}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 15px 0; font-size: 18px; font-weight: bold;">Total Amount</td>
+                    <td style="padding: 15px 0; font-size: 18px; font-weight: bold; text-align: right; color: #2ecc71;">Rs. ${Number(total) + Number(deliveryCharge)}</td>
+                </tr>
+            </table>
+        </div>
+    `;
+}
+
 // 🍔 Order Notification Templates (Professional English)
-export function getOrderConfirmedTemplate(customerName: string, orderId: string, restaurantName: string) {
+export function getOrderConfirmedTemplate(customerName: string, orderId: string, restaurantName: string, items: any[], total: number, deliveryCharge: number) {
     return `
         <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e1e1e1; border-radius: 16px; color: #333;">
             <div style="text-align: center; margin-bottom: 20px;">
@@ -64,10 +100,14 @@ export function getOrderConfirmedTemplate(customerName: string, orderId: string,
             </div>
             <p>Hello <strong>${customerName}</strong>,</p>
             <p>Great news! Your order <strong>#${orderId}</strong> from <strong>${restaurantName}</strong> has been confirmed and is now being processed by our kitchen.</p>
+            
             <div style="background-color: #f8f9fa; padding: 20px; border-radius: 12px; margin: 25px 0; border-left: 4px solid #2ecc71;">
-                <p style="margin: 0 0 10px 0;"><strong>Restaurant:</strong> ${restaurantName}</p>
+                <p style="margin: 0 0 5px 0;"><strong>Restaurant:</strong> ${restaurantName}</p>
                 <p style="margin: 0;"><strong>Order ID:</strong> #${orderId}</p>
             </div>
+
+            ${getOrderDetailsTable(items, total, deliveryCharge)}
+
             <p>We'll notify you once it's ready and on its way to you.</p>
             <p>Thank you for choosing us!</p>
             <hr style="border: 0; border-top: 1px solid #eee; margin: 25px 0;">
@@ -76,18 +116,22 @@ export function getOrderConfirmedTemplate(customerName: string, orderId: string,
     `
 }
 
-export function getOrderReadyTemplate(customerName: string, orderId: string, restaurantName: string) {
+export function getOrderReadyTemplate(customerName: string, orderId: string, restaurantName: string, items: any[], total: number, deliveryCharge: number) {
     return `
         <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e1e1e1; border-radius: 16px; color: #333;">
             <div style="text-align: center; margin-bottom: 20px;">
                 <h2 style="color: #f39c12; margin-top: 0;">Order is Ready! 🍔</h2>
             </div>
             <p>Hello <strong>${customerName}</strong>,</p>
-            <p>Your delicious order <strong>#${orderId}</strong> is ready and waiting! It has been prepared with care and is about to be dispatched.</p>
+            <p>Your delicious order <strong>#${orderId}</strong> from <strong>${restaurantName}</strong> is ready and waiting! It has been prepared with care and is about to be dispatched.</p>
+            
             <div style="background-color: #fcf8e3; padding: 20px; border-radius: 12px; margin: 25px 0; border-left: 4px solid #f39c12;">
-                <p style="margin: 0 0 10px 0;"><strong>Restaurant:</strong> ${restaurantName}</p>
+                <p style="margin: 0 0 5px 0;"><strong>Restaurant:</strong> ${restaurantName}</p>
                 <p style="margin: 0;"><strong>Order ID:</strong> #${orderId}</p>
             </div>
+
+            ${getOrderDetailsTable(items, total, deliveryCharge)}
+
             <p>Get ready to enjoy your meal!</p>
             <hr style="border: 0; border-top: 1px solid #eee; margin: 25px 0;">
             <p style="font-size: 12px; color: #888; text-align: center;">Powered by Saif RMS POS System</p>
@@ -95,38 +139,46 @@ export function getOrderReadyTemplate(customerName: string, orderId: string, res
     `
 }
 
-export function getOrderOutForDeliveryTemplate(customerName: string, orderId: string, restaurantName: string) {
+export function getOrderOutForDeliveryTemplate(customerName: string, orderId: string, restaurantName: string, items: any[], total: number, deliveryCharge: number) {
     return `
         <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e1e1e1; border-radius: 16px; color: #333;">
             <div style="text-align: center; margin-bottom: 20px;">
                 <h2 style="color: #3498db; margin-top: 0;">Out for Delivery! 🛵</h2>
             </div>
             <p>Hello <strong>${customerName}</strong>,</p>
-            <p>Your order <strong>#${orderId}</strong> is on its way! Our rider has picked up your meal and is headed to your location right now.</p>
+            <p>Your order <strong>#${orderId}</strong> from <strong>${restaurantName}</strong> is on its way! Our rider has picked up your meal and is headed to your location right now.</p>
+            
             <div style="background-color: #ebf5fb; padding: 20px; border-radius: 12px; margin: 25px 0; border-left: 4px solid #3498db;">
                 <p style="margin: 0 0 10px 0;"><strong>Restaurant:</strong> ${restaurantName}</p>
                 <p style="margin: 0;"><strong>Order ID:</strong> #${orderId}</p>
                 <p style="margin: 10px 0 0 0; color: #3498db;"><strong>Status:</strong> En Route</p>
             </div>
+
+            ${getOrderDetailsTable(items, total, deliveryCharge)}
+
             <p>Please stay reachable on your phone. See you soon!</p>
             <hr style="border: 0; border-top: 1px solid #eee; margin: 25px 0;">
-            <p style="font-size: 12px; color: #888; text-align: center;">Saif Kitchen & RMS Team</p>
+            <p style="font-size: 12px; color: #888; text-align: center;">${restaurantName} & RMS Team</p>
         </div>
     `
 }
 
-export function getOrderDeliveredTemplate(customerName: string, orderId: string, restaurantName: string) {
+export function getOrderDeliveredTemplate(customerName: string, orderId: string, restaurantName: string, items: any[], total: number, deliveryCharge: number) {
     return `
         <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e1e1e1; border-radius: 16px; color: #333;">
             <div style="text-align: center; margin-bottom: 20px;">
                 <h2 style="color: #27ae60; margin-top: 0;">Enjoy Your Meal! ✅</h2>
             </div>
             <p>Hello <strong>${customerName}</strong>,</p>
-            <p>We hope you've received your order <strong>#${orderId}</strong> and are enjoying it! We'd love to hear your feedback on the food and service.</p>
+            <p>We hope you've received your order <strong>#${orderId}</strong> from <strong>${restaurantName}</strong> and are enjoying it!</p>
+            
             <div style="background-color: #e9f7ef; padding: 20px; border-radius: 12px; margin: 25px 0; border-left: 4px solid #27ae60;">
-                <p style="margin: 0 0 10px 0;"><strong>Restaurant:</strong> ${restaurantName}</p>
+                <p style="margin: 0 0 5px 0;"><strong>Restaurant:</strong> ${restaurantName}</p>
                 <p style="margin: 0;"><strong>Status:</strong> Delivered Successfully</p>
             </div>
+
+            ${getOrderDetailsTable(items, total, deliveryCharge)}
+
             <p>We look forward to serving you again soon.</p>
             <hr style="border: 0; border-top: 1px solid #eee; margin: 25px 0;">
             <p style="font-size: 12px; color: #888; text-align: center;">Saif RMS POS Team</p>
@@ -134,19 +186,23 @@ export function getOrderDeliveredTemplate(customerName: string, orderId: string,
     `
 }
 
-export function getOrderCancelledTemplate(customerName: string, orderId: string, restaurantName: string, reason?: string) {
+export function getOrderCancelledTemplate(customerName: string, orderId: string, restaurantName: string, items: any[], total: number, deliveryCharge: number, reason?: string) {
     return `
         <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e1e1e1; border-radius: 16px; color: #333;">
             <div style="text-align: center; margin-bottom: 20px;">
                 <h2 style="color: #e74c3c; margin-top: 0;">Order Cancelled ❌</h2>
             </div>
             <p>Hello <strong>${customerName}</strong>,</p>
-            <p>We regret to inform you that your order <strong>#${orderId}</strong> has been cancelled.</p>
+            <p>We regret to inform you that your order <strong>#${orderId}</strong> from <strong>${restaurantName}</strong> has been cancelled.</p>
+            
             <div style="background-color: #fdedec; padding: 20px; border-radius: 12px; margin: 25px 0; border-left: 4px solid #e74c3c;">
-                <p style="margin: 0 0 10px 0;"><strong>Restaurant:</strong> ${restaurantName}</p>
+                <p style="margin: 0 0 5px 0;"><strong>Restaurant:</strong> ${restaurantName}</p>
                 <p style="margin: 0;"><strong>Order ID:</strong> #${orderId}</p>
                 ${reason ? `<p style="margin: 10px 0 0 0;"><strong>Reason:</strong> ${reason}</p>` : ''}
             </div>
+
+            ${getOrderDetailsTable(items, total, deliveryCharge)}
+
             <p>If you have any questions or would like to re-order, please feel free to contact us.</p>
             <hr style="border: 0; border-top: 1px solid #eee; margin: 25px 0;">
             <p style="font-size: 12px; color: #888; text-align: center;">Saif RMS Customer Support</p>
