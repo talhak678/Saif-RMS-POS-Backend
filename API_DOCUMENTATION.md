@@ -1883,7 +1883,6 @@ When a **Super Admin** calls `/api/dashboard` **without** `?restaurantId=`, they
 ### 🍽️ Mode 2 — Per-Restaurant Dashboard
 
 All non-Super-Admin roles always receive this. A Super Admin passing `?restaurantId=<id>` also gets this mode.
-
 **Success Response (200):**
 ```json
 {
