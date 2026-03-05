@@ -2,13 +2,12 @@ import prisma from '@/lib/prisma'
 import { successResponse, errorResponse } from '@/lib/api-response'
 import { NextRequest } from 'next/server'
 
-// Normalize phone: strip all non-digits, return last 10 digits for comparison
+// Normalize phone: strip all non-digits, return last 10 digits
 function normalizePhone(phone: string): string {
     const digits = phone.replace(/\D/g, '')
     return digits.slice(-10)
 }
 
-// Public endpoint: Track order by order number + slug (phone is optional security check)
 export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url)
@@ -16,8 +15,8 @@ export async function GET(req: NextRequest) {
         const phone = searchParams.get('phone')
         const restaurantSlug = searchParams.get('slug')
 
-        if (!orderNo) {
-            return errorResponse('Order number is required', null, 400)
+        if (!orderNo || !phone) {
+            return errorResponse('Order number and phone are required', null, 400)
         }
 
         const parsedOrderNo = parseInt(orderNo)
@@ -25,7 +24,7 @@ export async function GET(req: NextRequest) {
             return errorResponse('Invalid order number format', null, 400)
         }
 
-        // Find the order by orderNo + filter by restaurant slug
+        // 1. Find all orders with this orderNo and slug
         const orders = await prisma.order.findMany({
             where: {
                 orderNo: parsedOrderNo,
@@ -47,26 +46,19 @@ export async function GET(req: NextRequest) {
             return errorResponse('Order not found. Please check your order number and restaurant.', null, 404)
         }
 
-        // If phone is provided, validate it with normalized comparison
-        if (phone && phone.trim() !== '') {
-            const normalizedEnteredPhone = normalizePhone(phone)
+        // 2. Perform normalized phone matching
+        const normalizedEnteredPhone = normalizePhone(phone)
+        const matchedOrder = orders.find(order => {
+            const storedPhone = order.customer?.phone || ''
+            if (!storedPhone) return false
+            return normalizePhone(storedPhone) === normalizedEnteredPhone
+        })
 
-            const matchedOrder = orders.find(order => {
-                const storedPhone = order.customer?.phone || ''
-                if (!storedPhone) return true // no phone stored = allow
-                const normalizedStoredPhone = normalizePhone(storedPhone)
-                return normalizedStoredPhone === normalizedEnteredPhone
-            })
-
-            if (!matchedOrder) {
-                return errorResponse('Phone number does not match. Please check your details.', null, 404)
-            }
-
-            return successResponse(matchedOrder)
+        if (!matchedOrder) {
+            return errorResponse('Security Check: Phone number does not match this order No.', null, 404)
         }
 
-        // No phone provided — return first matched order
-        return successResponse(orders[0])
+        return successResponse(matchedOrder)
     } catch (error: any) {
         return errorResponse('Failed to track order', error.message, 500)
     }
