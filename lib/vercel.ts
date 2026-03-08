@@ -1,8 +1,8 @@
 const VERCEL_API = 'https://api.vercel.com';
+// IMPORTANT: Vercel API requires team SLUG, not teamId!
 const TOKEN = process.env.VERCEL_TOKEN;
-// Hardcoded fallback to ensure it ALWAYS targets the Website project
 const PROJECT_ID = process.env.TARGET_PROJECT_ID || "prj_nRED2jSm4JcRMWlLW7Aw1wec7Hkl";
-const TEAM_ID = process.env.VERCEL_TEAM_ID || "team_pKWyNXrFbEyRyuhvLKmakyzC";
+const TEAM_SLUG = process.env.VERCEL_TEAM_SLUG || "talhas-projects-b89d9ca6";
 
 function getHeaders() {
     return {
@@ -11,30 +11,28 @@ function getHeaders() {
     };
 }
 
+// CRITICAL FIX: Use 'slug' param NOT 'teamId' param
 function getTeamParam() {
-    return TEAM_ID ? `?teamId=${TEAM_ID}` : '';
+    return TEAM_SLUG ? `?slug=${TEAM_SLUG}` : '';
 }
 
 /**
- * Adds a custom domain to the Vercel project automatically.
- * This handles both the root domain and the www subdomain.
+ * Adds a custom domain to the Vercel Website project automatically.
  */
 export async function addDomainToVercel(domain: string) {
     if (!TOKEN || !PROJECT_ID) {
-        console.log('⚠️ Vercel Token or Project ID missing in environment variables. Skipping automatic domain connection.');
+        console.log('⚠️ Vercel Token or Project ID missing. Skipping domain connection.');
         return null;
     }
 
     const headers = getHeaders();
     const teamParam = getTeamParam();
+    const rootDomain = domain.replace(/^www\./, '').toLowerCase().trim();
 
     try {
-        console.log(`🚀 Adding domain to Vercel: ${domain}`);
+        console.log(`🚀 [VERCEL] Adding domain: ${rootDomain} to project: ${PROJECT_ID} with slug: ${TEAM_SLUG}`);
 
-        // Clean domain (remove www. prefix if present for root addition)
-        const rootDomain = domain.replace(/^www\./, '');
-
-        // 1. Add the root domain
+        // Add root domain
         const response = await fetch(`${VERCEL_API}/v10/projects/${PROJECT_ID}/domains${teamParam}`, {
             method: 'POST',
             headers,
@@ -44,40 +42,34 @@ export async function addDomainToVercel(domain: string) {
         const data = await response.json();
 
         if (!response.ok && data.error?.code !== 'domain_already_exists') {
-            console.error('💥 Vercel API Error (root):', data);
-            return { success: false, error: data.error };
+            console.error('💥 [VERCEL] Root domain error:', JSON.stringify(data));
+            return { success: false, error: data.error?.message || 'Failed to add root domain' };
         }
 
-        console.log(`✅ Root domain added to Vercel: ${rootDomain}`);
+        console.log(`✅ [VERCEL] Root domain added: ${rootDomain}`);
 
-        // 2. Also add the 'www' version
+        // Add www version
         try {
-            const wwwResponse = await fetch(`${VERCEL_API}/v10/projects/${PROJECT_ID}/domains${teamParam}`, {
+            const wwwRes = await fetch(`${VERCEL_API}/v10/projects/${PROJECT_ID}/domains${teamParam}`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ name: `www.${rootDomain}` })
             });
-            const wwwData = await wwwResponse.json();
-
-            if (wwwResponse.ok || wwwData.error?.code === 'domain_already_exists') {
-                console.log(`✅ WWW subdomain added to Vercel: www.${rootDomain}`);
-            } else {
-                console.log(`ℹ️ WWW subdomain issue:`, wwwData);
-            }
-        } catch (err: any) {
-            console.log(`ℹ️ WWW subdomain might already exist or failed: ${err.message}`);
+            const wwwData = await wwwRes.json();
+            if (wwwRes.ok) console.log(`✅ [VERCEL] WWW subdomain added: www.${rootDomain}`);
+        } catch (e: any) {
+            console.log(`ℹ️ [VERCEL] WWW skipped: ${e.message}`);
         }
 
         return { success: true, data };
     } catch (error: any) {
-        console.error('💥 Error adding domain to Vercel:', error.message);
+        console.error('💥 [VERCEL] Network error:', error.message);
         return { success: false, error: error.message };
     }
 }
 
 /**
- * Removes a custom domain from the Vercel project.
- * Removes both root and www versions.
+ * Removes a custom domain from the Vercel Website project.
  */
 export async function removeDomainFromVercel(domain: string) {
     if (!TOKEN || !PROJECT_ID) {
@@ -87,47 +79,30 @@ export async function removeDomainFromVercel(domain: string) {
 
     const headers = getHeaders();
     const teamParam = getTeamParam();
-    const rootDomain = domain.replace(/^www\./, '');
+    const rootDomain = domain.replace(/^www\./, '').toLowerCase().trim();
 
     try {
-        console.log(`🗑️ Removing domain from Vercel: ${rootDomain}`);
+        console.log(`🗑️ [VERCEL] Removing domain: ${rootDomain}`);
 
-        // Remove root domain
-        const rootRes = await fetch(`${VERCEL_API}/v9/projects/${PROJECT_ID}/domains/${rootDomain}${teamParam}`, {
+        await fetch(`${VERCEL_API}/v9/projects/${PROJECT_ID}/domains/${rootDomain}${teamParam}`, {
             method: 'DELETE',
             headers,
         });
 
-        if (rootRes.ok) {
-            console.log(`✅ Root domain removed: ${rootDomain}`);
-        } else {
-            const rootData = await rootRes.json();
-            console.log(`ℹ️ Root domain removal:`, rootData);
-        }
-
-        // Remove www subdomain
-        try {
-            const wwwRes = await fetch(`${VERCEL_API}/v9/projects/${PROJECT_ID}/domains/www.${rootDomain}${teamParam}`, {
-                method: 'DELETE',
-                headers,
-            });
-            if (wwwRes.ok) {
-                console.log(`✅ WWW subdomain removed: www.${rootDomain}`);
-            }
-        } catch (err: any) {
-            console.log(`ℹ️ WWW removal skipped: ${err.message}`);
-        }
+        await fetch(`${VERCEL_API}/v9/projects/${PROJECT_ID}/domains/www.${rootDomain}${teamParam}`, {
+            method: 'DELETE',
+            headers,
+        }).catch(() => { });
 
         return { success: true };
     } catch (error: any) {
-        console.error('💥 Error removing domain from Vercel:', error.message);
+        console.error('💥 [VERCEL] Error removing domain:', error.message);
         return { success: false, error: error.message };
     }
 }
 
 /**
  * Gets the domain configuration status from Vercel.
- * Returns detailed info about DNS verification status.
  */
 export async function getDomainConfigFromVercel(domain: string) {
     if (!TOKEN || !PROJECT_ID) {
@@ -137,44 +112,31 @@ export async function getDomainConfigFromVercel(domain: string) {
 
     const headers = getHeaders();
     const teamParam = getTeamParam();
-    const rootDomain = domain.replace(/^www\./, '');
+    const rootDomain = domain.replace(/^www\./, '').toLowerCase().trim();
 
     try {
-        console.log(`🔍 Checking Vercel domain config: ${rootDomain}`);
+        console.log(`🔍 [VERCEL] Checking config for: ${rootDomain}`);
 
-        // Check domain configuration on Vercel
-        const response = await fetch(`${VERCEL_API}/v6/domains/${rootDomain}/config${teamParam}`, {
+        const configRes = await fetch(`${VERCEL_API}/v6/domains/${rootDomain}/config${teamParam}`, {
             method: 'GET',
             headers,
         });
+        const configData = await configRes.json();
 
-        const configData = await response.json();
-        console.log(`📋 Vercel domain config:`, JSON.stringify(configData));
-
-        // Also get domain info from the project
-        const domainRes = await fetch(`${VERCEL_API}/v9/projects/${PROJECT_ID}/domains${teamParam}`, {
+        const domainRes = await fetch(`${VERCEL_API}/v9/projects/${PROJECT_ID}/domains/${rootDomain}${teamParam}`, {
             method: 'GET',
             headers,
         });
-
-        const domainList = await domainRes.json();
-        const projectDomain = domainList.domains?.find((d: any) =>
-            d.name === rootDomain || d.name === `www.${rootDomain}`
-        );
+        const projectDomainData = await domainRes.json();
 
         return {
             config: configData,
-            projectDomain: projectDomain || null,
-            // Vercel considers domain "misconfigured" if not pointing correctly
-            isConfigured: configData.misconfigured === false,
-            // Domain conflicts or issues
+            projectDomain: projectDomainData || null,
+            isConfigured: projectDomainData?.verified === true && !configData.misconfigured,
             conflicts: configData.conflicts || [],
-            // A Records and CNAME info Vercel expects
-            aValues: configData.aValues || [],
-            cnames: configData.cnames || [],
         };
     } catch (error: any) {
-        console.error('💥 Error checking Vercel domain config:', error.message);
+        console.error('💥 [VERCEL] Error checking config:', error.message);
         return null;
     }
 }
