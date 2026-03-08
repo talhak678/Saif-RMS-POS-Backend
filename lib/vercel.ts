@@ -1,7 +1,8 @@
 const VERCEL_API = 'https://api.vercel.com';
 const TOKEN = process.env.VERCEL_TOKEN;
-const PROJECT_ID = process.env.VERCEL_PROJECT_ID;
-const TEAM_ID = process.env.VERCEL_TEAM_ID; // Optional
+// Hardcoded fallback to ensure it ALWAYS targets the Website project
+const PROJECT_ID = process.env.TARGET_PROJECT_ID || "prj_nRED2jSm4JcRMWlLW7Aw1wec7Hkl";
+const TEAM_ID = process.env.VERCEL_TEAM_ID || "team_pKWyNXrFbEyRyuhvLKmakyzC";
 
 function getHeaders() {
     return {
