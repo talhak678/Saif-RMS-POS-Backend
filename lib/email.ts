@@ -294,3 +294,33 @@ export function getSubscriptionExpiredTemplate(customerName: string, restaurantN
         </div>
     `
 }
+
+export function getNewOrderRestaurantAlertTemplate(restaurantName: string, orderNo: string, customerName: string, customerPhone: string, items: any[], total: number, deliveryCharge: number, type: string, address?: string) {
+    const itemsTable = getOrderDetailsTable(items, total, deliveryCharge);
+    return `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e1e1e1; border-radius: 16px; color: #333; border-top: 6px solid #5d69b9;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="color: #5d69b9; margin-top: 0;">New Order Received! 🛒</h2>
+                <p style="font-size: 14px; color: #666;">Order #${orderNo} from Website</p>
+            </div>
+            
+            <p>Hi <strong>${restaurantName}</strong> Team,</p>
+            <p>You have received a new <strong>${type}</strong> order via your website.</p>
+            
+            <div style="background-color: #f0f2ff; padding: 20px; border-radius: 12px; margin: 25px 0;">
+                <p style="margin: 0 0 10px 0;"><strong>Customer:</strong> ${customerName}</p>
+                <p style="margin: 0 0 10px 0;"><strong>Phone:</strong> ${customerPhone}</p>
+                ${address ? `<p style="margin: 0;"><strong>Delivery Address:</strong> ${address}</p>` : ''}
+            </div>
+
+            ${itemsTable}
+
+            <div style="text-align: center; margin-top: 30px;">
+                <p style="font-size: 14px; color: #555;">Please log in to your dashboard to manage this order.</p>
+            </div>
+            
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 25px 0;">
+            <p style="font-size: 12px; color: #888; text-align: center;">Automated Order Alert @ Saif RMS</p>
+        </div>
+    `
+}

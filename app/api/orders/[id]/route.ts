@@ -81,7 +81,7 @@ export const PUT = withAuth(async (req, { params, auth }) => {
         if (status === 'DELIVERED' && order.customerId) {
             try {
                 // Check if already earned points for this order
-                const existingTrx = await prisma.loyaltyTrx.findFirst({
+                const existingTrx = await (prisma as any).loyaltyTrx.findFirst({
                     where: { orderId: order.id, type: 'EARNED' }
                 });
 
@@ -92,7 +92,7 @@ export const PUT = withAuth(async (req, { params, auth }) => {
                             where: { id: order.customerId },
                             data: { loyaltyPoints: { increment: pointsToAward } }
                         }),
-                        prisma.loyaltyTrx.create({
+                        (prisma as any).loyaltyTrx.create({
                             data: {
                                 points: pointsToAward,
                                 type: 'EARNED',

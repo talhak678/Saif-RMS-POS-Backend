@@ -145,7 +145,7 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
 
                 if (users.length > 0) {
                     // Fetch template
-                    const template = await prisma.notificationTemplate.findUnique({
+                    const template = await (prisma as any).notificationTemplate.findUnique({
                         where: { event: 'NEW_ORDER_POS' }
                     });
 
@@ -164,6 +164,45 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
                         }))
                     });
                     console.log(`🔔 Notifications created for ${users.length} users.`);
+                }
+
+                // 2. Send Email Alert to Restaurant Owner
+                const notifyEmail = fullOrder.branch.restaurant.notificationEmail || fullOrder.branch.restaurant.contactEmail;
+                if (notifyEmail && fullOrder.source === 'POS') {
+                    const { sendEmail, getNewOrderRestaurantAlertTemplate } = await import('@/lib/email');
+
+                    // Setup custom SMTP if available
+                    let smtpConfig = undefined;
+                    const restaurant = fullOrder.branch.restaurant;
+                    if (restaurant.smtpHost && restaurant.smtpUser && restaurant.smtpPass) {
+                        smtpConfig = {
+                            host: restaurant.smtpHost,
+                            port: restaurant.smtpPort || 587,
+                            secure: restaurant.smtpSecure === true,
+                            auth: { user: restaurant.smtpUser, pass: restaurant.smtpPass }
+                        };
+                    }
+
+                    const emailHtml = getNewOrderRestaurantAlertTemplate(
+                        restaurant.name,
+                        fullOrder.orderNo.toString(),
+                        fullOrder.customer?.name || 'Walk-in Customer (POS)',
+                        fullOrder.customer?.phone || 'N/A',
+                        fullOrder.items,
+                        Number(fullOrder.total),
+                        Number(fullOrder.deliveryCharge || 0),
+                        fullOrder.type,
+                        fullOrder.deliveryAddress || undefined
+                    );
+
+                    await sendEmail({
+                        to: notifyEmail,
+                        subject: `New POS Order Alert! #${fullOrder.orderNo}`,
+                        html: emailHtml,
+                        fromName: 'Saif RMS Alerts',
+                        smtpConfig
+                    });
+                    console.log(`📧 POS Order alert email sent to ${notifyEmail}`);
                 }
             } catch (notifyError) {
                 console.error('Failed to create order notifications:', notifyError);

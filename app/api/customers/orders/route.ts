@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
 
 
 
-        const result = await prisma.$transaction(async (tx) => {
+        const result = await prisma.$transaction(async (tx: any) => {
             // Create the order
             const order = await tx.order.create({
                 data: {
@@ -166,7 +166,7 @@ export async function POST(req: NextRequest) {
                     where: { id: customer.customerId },
                     data: { loyaltyPoints: { decrement: loyaltyAmount } }
                 });
-                await tx.loyaltyTrx.create({
+                await (tx as any).loyaltyTrx.create({
                     data: {
                         points: loyaltyAmount,
                         type: 'REDEEMED',
@@ -204,35 +204,81 @@ export async function POST(req: NextRequest) {
             return errorResponse('Order created but could not be retrieved', null, 500)
         }
 
-        // 🔔 Create Notifications for restaurant staff
+        // 🔔 Create Notifications for restaurant staff & Send Email Alert
         try {
-            const users = await prisma.user.findMany({
-                where: { restaurantId: customer.restaurantId },
-                select: { id: true }
+            const restaurant = await prisma.restaurant.findUnique({
+                where: { id: customer.restaurantId },
+                select: { id: true, name: true, notificationEmail: true, contactEmail: true, smtpHost: true, smtpUser: true, smtpPass: true, smtpPort: true, smtpSecure: true }
             });
 
-            if (users.length > 0) {
-                // Fetch template
-                const template = await prisma.notificationTemplate.findUnique({
-                    where: { event: 'NEW_ORDER_WEB' }
-                });
+            if (restaurant) {
+                // 1. Send Email Alert to Restaurant Owner
+                const notifyEmail = restaurant.notificationEmail || restaurant.contactEmail;
+                if (notifyEmail) {
+                    const { sendEmail, getNewOrderRestaurantAlertTemplate } = await import('@/lib/email');
 
-                let message = `Website se Naya Order aya hai! #${fullOrder.orderNo}`;
-                if (template) {
-                    message = template.message.replace("#{orderNo}", fullOrder.orderNo.toString());
+                    // Setup custom SMTP if available
+                    let smtpConfig = undefined;
+                    if (restaurant.smtpHost && restaurant.smtpUser && restaurant.smtpPass) {
+                        smtpConfig = {
+                            host: restaurant.smtpHost,
+                            port: restaurant.smtpPort || 587,
+                            secure: restaurant.smtpSecure === true,
+                            auth: { user: restaurant.smtpUser, pass: restaurant.smtpPass }
+                        };
+                    }
+
+                    const emailHtml = getNewOrderRestaurantAlertTemplate(
+                        restaurant.name,
+                        fullOrder.orderNo.toString(),
+                        fullOrder.customer?.name || 'Guest',
+                        fullOrder.customer?.phone || 'N/A',
+                        fullOrder.items,
+                        Number(fullOrder.total),
+                        Number(fullOrder.deliveryCharge || 0),
+                        fullOrder.type,
+                        fullOrder.deliveryAddress || undefined
+                    );
+
+                    await sendEmail({
+                        to: notifyEmail,
+                        subject: `New Online Order Alert! #${fullOrder.orderNo}`,
+                        html: emailHtml,
+                        fromName: 'Saif RMS Alerts',
+                        smtpConfig
+                    });
+                    console.log(`📧 Order alert email sent to ${notifyEmail}`);
                 }
 
-                await prisma.notification.createMany({
-                    data: users.map(user => ({
-                        userId: user.id,
-                        message: message,
-                        isRead: false
-                    }))
+                // 2. Dashbord Notifications
+                const users = await prisma.user.findMany({
+                    where: { restaurantId: customer.restaurantId },
+                    select: { id: true }
                 });
-                console.log(`🔔 Notifications created for ${users.length} users.`);
+
+                if (users.length > 0) {
+                    // Fetch template
+                    const template = await (prisma as any).notificationTemplate.findUnique({
+                        where: { event: 'NEW_ORDER_WEB' }
+                    });
+
+                    let message = `Website se Naya Order aya hai! #${fullOrder.orderNo}`;
+                    if (template) {
+                        message = template.message.replace("#{orderNo}", fullOrder.orderNo.toString());
+                    }
+
+                    await prisma.notification.createMany({
+                        data: users.map((user: any) => ({
+                            userId: user.id,
+                            message: message,
+                            isRead: false
+                        }))
+                    });
+                    console.log(`🔔 Notifications created for ${users.length} users.`);
+                }
             }
         } catch (notifyError) {
-            console.error('Failed to create website order notifications:', notifyError);
+            console.error('Failed to process notifications/email alerts:', notifyError);
         }
 
         return successResponse({
