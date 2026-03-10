@@ -479,6 +479,16 @@ model Notification {
   @@map("notifications")
 }
 
+model NotificationTemplate {
+  id        String   @id @default(cuid())
+  event     String   @unique
+  message   String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("notification_templates")
+}
+
 // ---------------------------------------------------------
 // 9. CMS & Support
 // ---------------------------------------------------------
