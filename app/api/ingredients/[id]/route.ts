@@ -40,6 +40,12 @@ export const PUT = withAuth(async (req, { params, auth }) => {
         if (!existing) return errorResponse('Ingredient not found or unauthorized', null, 404)
 
         const body = await req.json()
+
+        // Inject restaurantId just like the POST endpoint
+        if (auth.role !== 'SUPER_ADMIN' || !body.restaurantId) {
+            body.restaurantId = auth.restaurantId;
+        }
+
         const validation = ingredientSchema.safeParse(body)
         if (!validation.success) {
             return errorResponse('Validation failed', validation.error.flatten().fieldErrors, 400)
