@@ -3,6 +3,7 @@ import { successResponse, errorResponse } from '@/lib/api-response'
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { hashPassword } from '@/lib/auth-utils'
+import { sendEmail, getRegistrationOtpTemplate } from '@/lib/email'
 
 const registerSchema = z.object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -59,24 +60,20 @@ export async function POST(req: NextRequest) {
 
         // 📧 Send Verification Email
         try {
-            const { sendEmail, getRegistrationOtpTemplate } = await import('@/lib/email')
             const restaurant = customer.restaurant as any;
 
-            // Generate SMTP config from restaurant settings
-            let smtpConfig = undefined;
-            if (restaurant.smtpHost && restaurant.smtpUser && restaurant.smtpPass) {
-                smtpConfig = {
-                    host: restaurant.smtpHost,
-                    port: restaurant.smtpPort || 587,
-                    secure: restaurant.smtpSecure,
-                    auth: {
-                        user: restaurant.smtpUser,
-                        pass: restaurant.smtpPass
-                    }
-                };
-            }
+            // Generate SMTP config from restaurant settings (exact same as forgot-password)
+            const smtpConfig = restaurant.smtpHost ? {
+                host: restaurant.smtpHost,
+                port: restaurant.smtpPort || 587,
+                secure: restaurant.smtpSecure,
+                auth: {
+                    user: restaurant.smtpUser || "",
+                    pass: restaurant.smtpPass || "",
+                }
+            } : undefined;
 
-            console.log(`📡 Attempting to send OTP to ${email} using ${smtpConfig ? 'custom' : 'default'} SMTP`);
+            console.log(`📡 Registration: Attempting to send OTP to ${email} for restaurant ${restaurant.name}`);
 
             await sendEmail({
                 to: email,
@@ -86,7 +83,7 @@ export async function POST(req: NextRequest) {
                 smtpConfig
             });
         } catch (emailErr) {
-            console.error('❌ Failed to send verification email:', emailErr);
+            console.error('❌ Registration Email Error:', emailErr);
         }
 
         // Return success but ask for verification
