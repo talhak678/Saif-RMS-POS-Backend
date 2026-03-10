@@ -36,7 +36,6 @@ export async function POST(req: NextRequest) {
         }
 
         const hashedPassword = await hashPassword(password)
-
         const customer = await prisma.customer.create({
             data: {
                 name,
@@ -47,8 +46,37 @@ export async function POST(req: NextRequest) {
             } as any
         })
 
+        // Generate JWT for Customer (Same as Login)
+        const SECRET_KEY = new TextEncoder().encode(
+            process.env.JWT_SECRET || "default_secret_key_change_me"
+        );
+        const { SignJWT } = await import('jose')
+        const { cookies } = await import('next/headers')
+
+        const token = await new SignJWT({
+            customerId: customer.id,
+            email: customer.email,
+            role: 'Customer',
+            restaurantId: customer.restaurantId
+        })
+            .setProtectedHeader({ alg: 'HS256' })
+            .setIssuedAt()
+            .setExpirationTime('7d')
+            .sign(SECRET_KEY)
+
+        // Set Cookie
+        const cookieStore = await cookies()
+        cookieStore.set('customer_token', token, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            path: '/',
+            maxAge: 60 * 60 * 24 * 7 // 7 days
+        })
+
         const { password: _, ...sanitized } = customer as any
-        return successResponse(sanitized, 'Registration successful', 201)
+        return successResponse({ ...sanitized, token }, 'Registration successful', 201)
+
     } catch (error: any) {
         console.error('Registration Error:', error)
         return errorResponse('Registration failed', error.message, 500)
