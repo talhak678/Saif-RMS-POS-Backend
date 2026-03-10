@@ -30,11 +30,10 @@ export async function POST(req: NextRequest) {
         });
 
         if (!customer) {
-            // Return success even if not found to prevent email enumeration
-            return NextResponse.json({
-                success: true,
-                message: "If an account with this email exists, a password reset link has been sent.",
-            });
+            return NextResponse.json(
+                { success: false, message: "No account found with this email. Please sign up first." },
+                { status: 404 }
+            );
         }
 
         // Generate reset token
