@@ -62,14 +62,31 @@ export async function POST(req: NextRequest) {
             const { sendEmail, getRegistrationOtpTemplate } = await import('@/lib/email')
             const restaurant = customer.restaurant as any;
 
+            // Generate SMTP config from restaurant settings
+            let smtpConfig = undefined;
+            if (restaurant.smtpHost && restaurant.smtpUser && restaurant.smtpPass) {
+                smtpConfig = {
+                    host: restaurant.smtpHost,
+                    port: restaurant.smtpPort || 587,
+                    secure: restaurant.smtpSecure,
+                    auth: {
+                        user: restaurant.smtpUser,
+                        pass: restaurant.smtpPass
+                    }
+                };
+            }
+
+            console.log(`📡 Attempting to send OTP to ${email} using ${smtpConfig ? 'custom' : 'default'} SMTP`);
+
             await sendEmail({
                 to: email,
                 subject: `Verify Your Account - ${restaurant.name}`,
                 html: getRegistrationOtpTemplate(name, otp, restaurant.name),
-                fromName: restaurant.name
+                fromName: restaurant.name,
+                smtpConfig
             });
         } catch (emailErr) {
-            console.error('Failed to send verification email:', emailErr);
+            console.error('❌ Failed to send verification email:', emailErr);
         }
 
         // Return success but ask for verification
