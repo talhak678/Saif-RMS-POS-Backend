@@ -42,6 +42,60 @@ export async function POST(req: NextRequest) {
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
+        const restaurant = await prisma.restaurant.findUnique({
+            where: { id: restaurantId }
+        });
+
+        if (!restaurant) {
+            return errorResponse('Restaurant not found', null, 404)
+        }
+
+        const restaurantName = (restaurant.name || 'Saif RMS').trim();
+
+        // 📧 Prepare Email Content (Hardcoded like working routes)
+        const emailHtml = `
+            <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; border: 1px solid #f0f0f0; border-radius: 20px; color: #333;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h2 style="color: #111; margin: 0; font-size: 24px; font-weight: 800;">Verify Your Account</h2>
+                    <p style="color: #666; margin-top: 10px;">Welcome to ${restaurantName}</p>
+                </div>
+                <p style="font-size: 16px;">Hi <strong>${name}</strong>,</p>
+                <p style="font-size: 16px; color: #555;">To complete your registration, please use the 6-digit verification code below:</p>
+                <div style="background-color: #f9fafb; padding: 40px; border-radius: 16px; margin: 30px 0; text-align: center; border: 2px dashed #e5e7eb;">
+                    <h1 style="color: #ef4444; letter-spacing: 12px; margin: 0; font-size: 42px; font-weight: 900;">${otp}</h1>
+                    <p style="color: #9ca3af; font-size: 13px; margin-top: 15px;">CODE EXPIRES IN 10 MINUTES</p>
+                </div>
+                <p style="font-size: 12px; color: #999; text-align: center;">This is a security message from ${restaurantName}.</p>
+            </div>
+        `;
+
+        // Generate SMTP config (exact same as working newsletter route)
+        const smtpConfig = (restaurant.smtpHost && restaurant.smtpUser && restaurant.smtpPass)
+            ? {
+                host: restaurant.smtpHost,
+                port: restaurant.smtpPort || 587,
+                secure: restaurant.smtpSecure || false,
+                auth: {
+                    user: restaurant.smtpUser,
+                    pass: restaurant.smtpPass
+                }
+            } : undefined;
+
+        // 📡 Send Email FIRST
+        const emailResult = await sendEmail({
+            to: email,
+            subject: `Verification Code: ${otp}`,
+            html: emailHtml,
+            fromName: restaurantName,
+            smtpConfig
+        });
+
+        if (!emailResult.success) {
+            console.error('❌ Registration Email Failed:', emailResult.error);
+            return errorResponse('Could not send verification email. Please try again later.', null, 500);
+        }
+
+        // Now create customer after email success
         const customer = await prisma.customer.create({
             data: {
                 name,
@@ -52,51 +106,8 @@ export async function POST(req: NextRequest) {
                 isEmailVerified: false,
                 emailOtp: otp,
                 otpExpiresAt
-            } as any,
-            include: {
-                restaurant: true
-            }
+            } as any
         })
-
-        // 📧 Send Verification Email
-        try {
-            const restaurant = customer.restaurant as any;
-            const restaurantName = (restaurant?.name || 'Saif RMS').trim();
-
-            console.log('🏢 Restaurant Data for Email:', {
-                id: restaurant?.id,
-                name: restaurantName,
-                smtpHost: restaurant?.smtpHost,
-                smtpUser: restaurant?.smtpUser,
-                hasSmtpPass: !!restaurant?.smtpPass
-            });
-
-            // Generate SMTP config from restaurant settings (exact same as working routes)
-            const smtpConfig = (restaurant?.smtpHost && restaurant?.smtpUser && restaurant?.smtpPass)
-                ? {
-                    host: restaurant.smtpHost,
-                    port: restaurant.smtpPort || 587,
-                    secure: restaurant.smtpSecure || false,
-                    auth: {
-                        user: restaurant.smtpUser,
-                        pass: restaurant.smtpPass
-                    }
-                } : undefined;
-
-            console.log(`📡 Registration: Attempting to send OTP to ${email} for restaurant ${restaurantName}`);
-            console.log('📡 SMTP Config used:', smtpConfig ? 'Custom Restaurant SMTP' : 'Global Default SMTP');
-
-            const emailResult = await sendEmail({
-                to: email,
-                subject: `Verify Your Account - ${restaurantName}`,
-                html: getRegistrationOtpTemplate(name, otp, restaurantName),
-                fromName: restaurantName,
-                smtpConfig
-            });
-            console.log('📬 Email Send Result:', emailResult);
-        } catch (emailErr) {
-            console.error('❌ Registration Email Error:', emailErr);
-        }
 
         // Return success but ask for verification
         return successResponse({
