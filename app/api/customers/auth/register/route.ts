@@ -61,27 +61,39 @@ export async function POST(req: NextRequest) {
         // 📧 Send Verification Email
         try {
             const restaurant = customer.restaurant as any;
+            const restaurantName = (restaurant?.name || 'Saif RMS').trim();
 
-            // Generate SMTP config from restaurant settings (exact same as forgot-password)
-            const smtpConfig = restaurant.smtpHost ? {
-                host: restaurant.smtpHost,
-                port: restaurant.smtpPort || 587,
-                secure: restaurant.smtpSecure,
-                auth: {
-                    user: restaurant.smtpUser || "",
-                    pass: restaurant.smtpPass || "",
-                }
-            } : undefined;
+            console.log('🏢 Restaurant Data for Email:', {
+                id: restaurant?.id,
+                name: restaurantName,
+                smtpHost: restaurant?.smtpHost,
+                smtpUser: restaurant?.smtpUser,
+                hasSmtpPass: !!restaurant?.smtpPass
+            });
 
-            console.log(`📡 Registration: Attempting to send OTP to ${email} for restaurant ${restaurant.name}`);
+            // Generate SMTP config from restaurant settings (exact same as working routes)
+            const smtpConfig = (restaurant?.smtpHost && restaurant?.smtpUser && restaurant?.smtpPass)
+                ? {
+                    host: restaurant.smtpHost,
+                    port: restaurant.smtpPort || 587,
+                    secure: restaurant.smtpSecure || false,
+                    auth: {
+                        user: restaurant.smtpUser,
+                        pass: restaurant.smtpPass
+                    }
+                } : undefined;
 
-            await sendEmail({
+            console.log(`📡 Registration: Attempting to send OTP to ${email} for restaurant ${restaurantName}`);
+            console.log('📡 SMTP Config used:', smtpConfig ? 'Custom Restaurant SMTP' : 'Global Default SMTP');
+
+            const emailResult = await sendEmail({
                 to: email,
-                subject: `Verify Your Account - ${restaurant.name}`,
-                html: getRegistrationOtpTemplate(name, otp, restaurant.name),
-                fromName: restaurant.name,
+                subject: `Verify Your Account - ${restaurantName}`,
+                html: getRegistrationOtpTemplate(name, otp, restaurantName),
+                fromName: restaurantName,
                 smtpConfig
             });
+            console.log('📬 Email Send Result:', emailResult);
         } catch (emailErr) {
             console.error('❌ Registration Email Error:', emailErr);
         }
