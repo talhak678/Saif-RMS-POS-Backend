@@ -36,46 +36,47 @@ export async function POST(req: NextRequest) {
         }
 
         const hashedPassword = await hashPassword(password)
+
+        // 🔐 Generate 6-digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
         const customer = await prisma.customer.create({
             data: {
                 name,
                 email,
                 password: hashedPassword,
                 phone,
-                restaurantId
-            } as any
+                restaurantId,
+                isEmailVerified: false,
+                emailOtp: otp,
+                otpExpiresAt
+            } as any,
+            include: {
+                restaurant: true
+            }
         })
 
-        // Generate JWT for Customer (Same as Login)
-        const SECRET_KEY = new TextEncoder().encode(
-            process.env.JWT_SECRET || "default_secret_key_change_me"
-        );
-        const { SignJWT } = await import('jose')
-        const { cookies } = await import('next/headers')
+        // 📧 Send Verification Email
+        try {
+            const { sendEmail, getRegistrationOtpTemplate } = await import('@/lib/email')
+            const restaurant = customer.restaurant as any;
 
-        const token = await new SignJWT({
-            customerId: customer.id,
+            await sendEmail({
+                to: email,
+                subject: `Verify Your Account - ${restaurant.name}`,
+                html: getRegistrationOtpTemplate(name, otp, restaurant.name),
+                fromName: restaurant.name
+            });
+        } catch (emailErr) {
+            console.error('Failed to send verification email:', emailErr);
+        }
+
+        // Return success but ask for verification
+        return successResponse({
             email: customer.email,
-            role: 'Customer',
-            restaurantId: customer.restaurantId
-        })
-            .setProtectedHeader({ alg: 'HS256' })
-            .setIssuedAt()
-            .setExpirationTime('7d')
-            .sign(SECRET_KEY)
-
-        // Set Cookie
-        const cookieStore = await cookies()
-        cookieStore.set('customer_token', token, {
-            httpOnly: true,
-            secure: true,
-            sameSite: 'none',
-            path: '/',
-            maxAge: 60 * 60 * 24 * 7 // 7 days
-        })
-
-        const { password: _, ...sanitized } = customer as any
-        return successResponse({ ...sanitized, token }, 'Registration successful', 201)
+            requiresVerification: true
+        }, 'Account created! Please check your email for the verification code.', 201)
 
     } catch (error: any) {
         console.error('Registration Error:', error)

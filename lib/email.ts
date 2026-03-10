@@ -228,6 +228,35 @@ export function getOtpEmailTemplate(otp: string) {
     `
 }
 
+export function getRegistrationOtpTemplate(customerName: string, otp: string, restaurantName: string) {
+    return `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; border: 1px solid #f0f0f0; border-radius: 20px; color: #333; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <div style="background: #ef4444; width: 60px; height: 60px; border-radius: 15px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+                    <span style="font-size: 30px;">🔐</span>
+                </div>
+                <h2 style="color: #111; margin: 0; font-size: 24px; font-weight: 800;">Verify Your Account</h2>
+                <p style="color: #666; margin-top: 10px;">Welcome to ${restaurantName}!</p>
+            </div>
+            
+            <p style="font-size: 16px; line-height: 1.6;">Hi <strong>${customerName}</strong>,</p>
+            <p style="font-size: 16px; line-height: 1.6; color: #555;">Thanks for signing up! To complete your registration and secure your account, please use the 6-digit verification code below:</p>
+            
+            <div style="background-color: #f9fafb; padding: 40px; border-radius: 16px; margin: 30px 0; text-align: center; border: 2px dashed #e5e7eb;">
+                <h1 style="color: #ef4444; letter-spacing: 12px; margin: 0; font-size: 42px; font-weight: 900;">${otp}</h1>
+                <p style="color: #9ca3af; font-size: 13px; margin-top: 15px; text-transform: uppercase; letter-spacing: 1px;">Code expires in 10 minutes</p>
+            </div>
+            
+            <p style="font-size: 14px; color: #666; text-align: center; background: #fffbe6; padding: 12px; border-radius: 8px; border: 1px solid #ffe58f;">
+                <strong>Security Note:</strong> Never share this code with anyone. Our team will never ask for your PIN.
+            </p>
+            
+            <hr style="border: 0; border-top: 1px solid #f0f0f0; margin: 35px 0;">
+            <p style="font-size: 12px; color: #999; text-align: center;">This is an automated security message from ${restaurantName}.</p>
+        </div>
+    `
+}
+
 export function getSubscriptionWarningTemplate(customerName: string, daysLeft: number, restaurantName: string, expiryDate: string) {
     return `
         <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e1e1e1; border-radius: 16px; color: #333;">

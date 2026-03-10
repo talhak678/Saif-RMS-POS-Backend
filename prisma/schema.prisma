@@ -405,6 +405,9 @@ model Customer {
   email         String?      @unique
   password      String?      // Added for website auth
   phone         String?
+  isEmailVerified Boolean    @default(false) @map("is_email_verified")
+  emailOtp       String?      @map("email_otp")
+  otpExpiresAt  DateTime?    @map("otp_expires_at")
   restaurantId  String       @map("restaurant_id")
   restaurant    Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   orders        Order[]

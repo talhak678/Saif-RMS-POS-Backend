@@ -38,6 +38,10 @@ export async function POST(req: NextRequest) {
             return errorResponse('Invalid credentials', null, 401)
         }
 
+        if (!(customer as any).isEmailVerified) {
+            return errorResponse('Email not verified. Please verify your account first.', { requiresVerification: true, email: customer.email }, 403)
+        }
+
         // Generate JWT for Customer
         const token = await new SignJWT({
             customerId: customer.id,
