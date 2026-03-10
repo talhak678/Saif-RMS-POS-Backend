@@ -318,8 +318,10 @@ model Order {
   deliveryCharge  Decimal?  @map("delivery_charge") @db.Decimal(10, 2)
   notes           String?
   discountCode    String?   @map("discount_code")
+  loyaltyAmount   Float       @default(0) @map("loyalty_amount")
 
   review     Review?
+  loyaltyTrxs LoyaltyTrx[]
   createdAt  DateTime    @default(now()) @map("created_at")
   updatedAt  DateTime    @updatedAt @map("updated_at")
 
@@ -406,7 +408,7 @@ model Customer {
   restaurantId  String       @map("restaurant_id")
   restaurant    Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   orders        Order[]
-  loyaltyPoints Int          @default(0) @map("loyalty_points")
+  loyaltyPoints Float        @default(0) @map("loyalty_points")
   loyaltyTrxs   LoyaltyTrx[]
   createdAt     DateTime     @default(now()) @map("created_at")
   updatedAt     DateTime     @updatedAt @map("updated_at")
@@ -416,10 +418,12 @@ model Customer {
 
 model LoyaltyTrx {
   id         String   @id @default(cuid())
-  points     Int
+  points     Float
   type       String // EARNED, REDEEMED
   customerId String   @map("customer_id")
   customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  orderId    String?  @map("order_id")
+  order      Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
   createdAt  DateTime @default(now()) @map("created_at")
 
   @@map("loyalty_trxs")

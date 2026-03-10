@@ -73,7 +73,8 @@ export async function POST(req: NextRequest) {
             deliveryLng,
             deliveryCharge,
             discountCode,
-            notes
+            notes,
+            redeemPoints = false
         } = body
 
         if (!branchId || !items || items.length === 0 || !total) {
@@ -88,7 +89,7 @@ export async function POST(req: NextRequest) {
             return errorResponse('Invalid branch', null, 400)
         }
 
-        // Validate discount code if provided
+        // 1. Validate discount code if provided
         let finalTotal = total
         let discountData = null
         if (discountCode) {
@@ -113,6 +114,20 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        // 2. 💰 Loyalty Points Redemption
+        let loyaltyAmount = 0;
+        if (redeemPoints && customer.customerId) {
+            const customerData = await prisma.customer.findUnique({
+                where: { id: customer.customerId },
+                select: { loyaltyPoints: true }
+            });
+            if (customerData && customerData.loyaltyPoints > 0) {
+                // 1 point = 1 currency unit
+                loyaltyAmount = Math.min(customerData.loyaltyPoints, finalTotal);
+                finalTotal -= loyaltyAmount;
+            }
+        }
+
         const safeTotal = parseFloat(finalTotal.toFixed(2));
         if (isNaN(safeTotal)) throw new Error('Invalid total calculated');
 
@@ -134,6 +149,7 @@ export async function POST(req: NextRequest) {
                     deliveryCharge: deliveryCharge ? parseFloat(parseFloat(deliveryCharge.toString()).toFixed(2)) : 0,
                     notes,
                     discountCode,
+                    loyaltyAmount: loyaltyAmount,
                     items: {
                         create: items.map((item: any) => ({
                             menuItemId: item.menuItemId,
@@ -143,6 +159,22 @@ export async function POST(req: NextRequest) {
                     },
                 } as any,
             })
+
+            // 💰 Process Loyalty Point Deduction
+            if (loyaltyAmount > 0) {
+                await tx.customer.update({
+                    where: { id: customer.customerId },
+                    data: { loyaltyPoints: { decrement: loyaltyAmount } }
+                });
+                await tx.loyaltyTrx.create({
+                    data: {
+                        points: loyaltyAmount,
+                        type: 'REDEEMED',
+                        customerId: customer.customerId,
+                        orderId: order.id
+                    }
+                });
+            }
 
             // Create the payment record
             await tx.payment.create({

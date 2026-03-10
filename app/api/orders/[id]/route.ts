@@ -1,4 +1,4 @@
-    import prisma from '@/lib/prisma'
+import prisma from '@/lib/prisma'
 import { successResponse, errorResponse } from '@/lib/api-response'
 import { NextRequest } from 'next/server'
 import { orderUpdateSchema } from '@/lib/validations/order'
@@ -76,6 +76,37 @@ export const PUT = withAuth(async (req, { params, auth }) => {
                 }
             }
         })
+
+        // 💰 Loyalty Points Logic
+        if (status === 'DELIVERED' && order.customerId) {
+            try {
+                // Check if already earned points for this order
+                const existingTrx = await prisma.loyaltyTrx.findFirst({
+                    where: { orderId: order.id, type: 'EARNED' }
+                });
+
+                if (!existingTrx) {
+                    const pointsToAward = Number(order.total);
+                    await prisma.$transaction([
+                        prisma.customer.update({
+                            where: { id: order.customerId },
+                            data: { loyaltyPoints: { increment: pointsToAward } }
+                        }),
+                        prisma.loyaltyTrx.create({
+                            data: {
+                                points: pointsToAward,
+                                type: 'EARNED',
+                                customerId: order.customerId,
+                                orderId: order.id
+                            }
+                        })
+                    ]);
+                    console.log(`🎁 Awarded ${pointsToAward} loyalty points to customer ${order.customerId}`);
+                }
+            } catch (loyaltyError) {
+                console.error('Failed to process loyalty points:', loyaltyError);
+            }
+        }
 
         // 📧 Handle Email Notifications based on Status
         if (order.customer?.email && status) {
