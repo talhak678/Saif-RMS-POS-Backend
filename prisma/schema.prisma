@@ -258,6 +258,9 @@ model Ingredient {
   restaurant   Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   recipes      Recipe[]
   stocks       Stock[]
+  category     String?
+  unitPrice    Decimal?    @map("unit_price") @db.Decimal(10, 2)
+  parLevel     Float?      @map("par_level")
   createdAt    DateTime    @default(now()) @map("created_at")
   updatedAt    DateTime    @updatedAt @map("updated_at")
 

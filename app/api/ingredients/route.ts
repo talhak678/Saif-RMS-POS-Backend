@@ -18,7 +18,8 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
         const ingredients = await prisma.ingredient.findMany({
             where: restaurantId ? { restaurantId } : {},
             include: {
-                _count: { select: { stocks: true, recipes: true } }
+                stocks: true,
+                recipes: { include: { menuItem: true } }
             }
         })
         return successResponse(ingredients)

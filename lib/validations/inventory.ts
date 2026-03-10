@@ -4,6 +4,9 @@ export const ingredientSchema = z.object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
     unit: z.string().min(1, 'Unit is required'), // e.g., kg, grams, pcs
     restaurantId: z.string().cuid('Invalid restaurant ID'),
+    category: z.string().optional(),
+    unitPrice: z.number().optional(),
+    parLevel: z.number().optional(),
 })
 
 export const recipeSchema = z.object({
