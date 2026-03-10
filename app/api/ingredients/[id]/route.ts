@@ -73,4 +73,4 @@ export const DELETE = withAuth(async (req, { params, auth }) => {
     } catch (error: any) {
         return errorResponse('Failed to delete ingredient', error.message, 500)
     }
-}, { roles: ['SUPER_ADMIN', 'ADMIN', 'Manager'] })
+})
