@@ -79,16 +79,25 @@ export const POST = async (req: NextRequest) => {
             }
         })
 
-        const displayContact = contactName || "N/A";
-        const displayEmail = contactEmail || "N/A";
-        const displayPhone = contactPhone || "N/A";
-        const contactInfo = `(Contact: ${displayContact}, Email: ${displayEmail}, Phone: ${displayPhone})`;
+        // Fetch template
+        const template = await prisma.notificationTemplate.findUnique({
+            where: { event: 'SUB_REQUEST' }
+        });
+
+        const restaurantName = (subscriptionRequest as any).restaurant?.name || 'New Restaurant';
+        let message = `New subscription upgrade request from "${restaurantName}" for ${plan} plan (${billingCycle}).`;
+
+        if (template) {
+            message = template.message
+                .replace("#{restaurantName}", restaurantName)
+                .replace("#{plan}", plan || "");
+        }
 
         for (const admin of superAdmins) {
             await prisma.notification.create({
                 data: {
                     userId: admin.id,
-                    message: `New subscription upgrade request from "${(subscriptionRequest as any).restaurant?.name || 'New Restaurant'}" for ${plan} plan (${billingCycle}). ${contactInfo}`,
+                    message: message,
                     isRead: false
                 }
             })

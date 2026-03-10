@@ -144,10 +144,22 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
                 });
 
                 if (users.length > 0) {
+                    // Fetch template
+                    const template = await prisma.notificationTemplate.findUnique({
+                        where: { event: 'NEW_ORDER_POS' }
+                    });
+
+                    let message = `Naya Order pohnch gaya! #${fullOrder.orderNo} (${fullOrder.branch.restaurant.name})`;
+                    if (template) {
+                        message = template.message
+                            .replace("#{orderNo}", fullOrder.orderNo.toString())
+                            .replace("#{restaurantName}", fullOrder.branch.restaurant.name);
+                    }
+
                     await prisma.notification.createMany({
                         data: users.map(user => ({
                             userId: user.id,
-                            message: `Naya Order pohnch gaya! #${fullOrder.orderNo} (${fullOrder.branch.restaurant.name})`,
+                            message: message,
                             isRead: false
                         }))
                     });

@@ -212,11 +212,20 @@ export async function POST(req: NextRequest) {
             });
 
             if (users.length > 0) {
-                const restaurantName = fullOrder.branch.name; // Using branch name or we could fetch restaurant name
+                // Fetch template
+                const template = await prisma.notificationTemplate.findUnique({
+                    where: { event: 'NEW_ORDER_WEB' }
+                });
+
+                let message = `Website se Naya Order aya hai! #${fullOrder.orderNo}`;
+                if (template) {
+                    message = template.message.replace("#{orderNo}", fullOrder.orderNo.toString());
+                }
+
                 await prisma.notification.createMany({
                     data: users.map(user => ({
                         userId: user.id,
-                        message: `Website se Naya Order aya hai! #${fullOrder.orderNo}`,
+                        message: message,
                         isRead: false
                     }))
                 });
