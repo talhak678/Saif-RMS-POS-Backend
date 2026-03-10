@@ -43,13 +43,18 @@ export const PUT = withAuth(async (req: NextRequest, { params, auth }) => {
         if (!existing) return errorResponse('Subscription price not found', null, 404)
 
         // Security check
+        let updateData = validation.data;
         if (auth.role !== 'SUPER_ADMIN') {
-            return errorResponse('Unauthorized to update this pricing', null, 403)
+            if (!auth.restaurantId || auth.restaurantId !== existing.restaurantId) {
+                return errorResponse('Unauthorized to update this pricing', null, 403);
+            }
+            // Merchants can only cancel/toggle their own active status, not change price or features
+            updateData = { isActive: validation.data.isActive };
         }
 
         const updated = await (prisma as any).subscriptionPrice.update({
             where: { id },
-            data: validation.data,
+            data: updateData,
             include: {
                 restaurant: {
                     select: { id: true, name: true, slug: true }
