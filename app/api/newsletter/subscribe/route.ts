@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
             : undefined
 
         // 1. Send welcome confirmation to subscriber
-        await sendEmail({
+        const subscriberEmailResult = await sendEmail({
             to: email,
             subject: `🎉 You're subscribed to ${restaurantName}!`,
             html: `
@@ -80,6 +80,12 @@ export async function POST(req: NextRequest) {
             fromName: restaurantName,
             smtpConfig
         })
+
+        if (!subscriberEmailResult.success) {
+            console.error('❌ Subscriber Email Error:', subscriberEmailResult.error);
+            const errorMsg = (subscriberEmailResult.error as any)?.message || 'Email service unavailable';
+            return errorResponse(`Email Error: ${errorMsg}`, null, 500);
+        }
 
         // 2. Notify restaurant owner if notification email is set
         if (notifyEmail) {

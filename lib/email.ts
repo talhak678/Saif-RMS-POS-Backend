@@ -1,16 +1,26 @@
 import nodemailer from 'nodemailer'
 
 // 📧 Setup Email Transporter
-// You should add these to your .env file
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: Number(process.env.SMTP_PORT) || 587,
-    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-    auth: {
-        user: process.env.SMTP_USER, // Your email
-        pass: process.env.SMTP_PASS, // Your app password
-    },
-})
+// Lazy initialization to ensure env vars are fresh
+function getTransporter() {
+    const user = (process.env.SMTP_USER || '').trim();
+    const pass = (process.env.SMTP_PASS || '').trim().replace(/\s/g, ''); // Remove all spaces
+    const host = (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
+    const port = Number(process.env.SMTP_PORT) || 587;
+    const secure = process.env.SMTP_SECURE === 'true';
+
+    console.log(`🔌 Initializing Transporter: ${host}:${port} (${user})`);
+
+    return nodemailer.createTransport({
+        host,
+        port,
+        secure,
+        auth: { user, pass },
+        // Add timeout for better error handling in serverless
+        connectionTimeout: 10000, 
+        greetingTimeout: 10000,
+    });
+}
 
 interface SmtpConfig {
     host: string
@@ -33,12 +43,19 @@ interface SendEmailOptions {
 
 export async function sendEmail({ to, subject, text, html, fromName, smtpConfig }: SendEmailOptions) {
     try {
-        // Use custom smtp if provided, else use global default
         const activeTransporter = smtpConfig
-            ? nodemailer.createTransport(smtpConfig)
-            : transporter;
+            ? nodemailer.createTransport({
+                ...smtpConfig,
+                auth: {
+                    user: (smtpConfig.auth.user || '').trim(),
+                    pass: (smtpConfig.auth.pass || '').trim().replace(/\s/g, '')
+                }
+            })
+            : getTransporter();
 
-        const fromEmail = smtpConfig ? smtpConfig.auth.user : process.env.SMTP_USER;
+        const fromEmail = smtpConfig ? smtpConfig.auth.user.trim() : (process.env.SMTP_USER || '').trim();
+
+        console.log(`📡 Attempting to send email to: ${to} via ${fromEmail}`);
 
         const info = await activeTransporter.sendMail({
             from: `"${fromName || 'Saif RMS'}" <${fromEmail}>`,
@@ -47,10 +64,10 @@ export async function sendEmail({ to, subject, text, html, fromName, smtpConfig 
             text,
             html,
         })
-        console.log('✅ Email sent: %s', info.messageId)
+        console.log('✅ Email sent successfully: %s', info.messageId)
         return { success: true, messageId: info.messageId }
     } catch (error) {
-        console.error('❌ Error sending email:', error)
+        console.error('❌ SMTP Error Details:', error)
         return { success: false, error }
     }
 }
