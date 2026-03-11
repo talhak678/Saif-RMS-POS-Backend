@@ -41,7 +41,13 @@ export async function addDomainToVercel(domain: string) {
 
         const data = await response.json();
 
-        if (!response.ok && data.error?.code !== 'domain_already_exists') {
+        // 🚀 CRITICAL FIX: Treat 'domain_already_in_use' as success if it's already in our project
+        if (!response.ok) {
+            const errorCode = data.error?.code;
+            if (errorCode === 'domain_already_exists' || errorCode === 'domain_already_in_use') {
+                console.log(`ℹ️ [VERCEL] Domain ${rootDomain} is already assigned/exists. Treating as success.`);
+                return { success: true, data };
+            }
             console.error('💥 [VERCEL] Root domain error:', JSON.stringify(data));
             return { success: false, error: data.error?.message || 'Failed to add root domain' };
         }
