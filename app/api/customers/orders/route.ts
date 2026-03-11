@@ -276,6 +276,34 @@ export async function POST(req: NextRequest) {
                     });
                     console.log(`🔔 Notifications created for ${users.length} users.`);
                 }
+
+                // --- ADDED: Expo Push Notifications ---
+                const staffWithTokens = await prisma.user.findMany({
+                    where: {
+                        restaurantId: customer.restaurantId,
+                        role: {
+                            name: {
+                                in: ['Merchant Admin', 'Cashier / POS Operator']
+                            }
+                        },
+                        pushToken: { not: null }
+                    },
+                    select: { pushToken: true }
+                });
+
+                const pushTokens = staffWithTokens.map(u => u.pushToken as string).filter(Boolean);
+
+                if (pushTokens.length > 0) {
+                    const { sendExpoPushNotification } = await import('@/lib/notifications');
+                    await sendExpoPushNotification(
+                        pushTokens,
+                        "New Online Order! 🌐",
+                        `New website order # ${fullOrder.orderNo} Recieved. Type: ${fullOrder.type}`,
+                        { orderId: fullOrder.id, orderNo: fullOrder.orderNo }
+                    );
+                    console.log(`📱 Push notifications sent to ${pushTokens.length} staff members.`);
+                }
+                // --- END ADDED ---
             }
         } catch (notifyError) {
             console.error('Failed to process notifications/email alerts:', notifyError);
