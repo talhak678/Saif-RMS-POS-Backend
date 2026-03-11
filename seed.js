@@ -51,7 +51,7 @@ async function main() {
         'pos:menu', 'pos:reservations', 'pos:table-services',
 
         // Restaurant Config
-        'restaurant-config:restaurants', 'restaurant-config:branches',
+        'restaurant-config:restaurants', 'restaurant-config:branches', 'restaurant-config:payments-history',
 
         // Delivery & Support
         'delivery-support:riders',
@@ -66,7 +66,7 @@ async function main() {
         'authentication:users', 'authentication:roles',
 
         // CMS & Website
-        'cms-website:page-sections', 'cms-website:banners', 'cms-website:faqs',
+        'cms-website:page-sections', 'cms-website:banners', 'cms-website:faqs', 'cms-website:domain',
 
         // Settings
         'settings:all'
@@ -84,11 +84,23 @@ async function main() {
     console.log(`Created ${permissions.length} permissions.`);
 
     // 3. Create Roles
+    const superAdminActions = [
+        'dashboard:overview',
+        'dashboard:reports',
+        'restaurant-config:restaurants',
+        'restaurant-config:branches',
+        'restaurant-config:payments-history',
+        'authentication:users',
+        'authentication:roles'
+    ];
+
     const superAdminRole = await prisma.role.create({
         data: {
             name: 'SUPER_ADMIN',
             permissions: {
-                connect: permissions.map(p => ({ id: p.id }))
+                connect: permissions
+                    .filter(p => superAdminActions.includes(p.action))
+                    .map(p => ({ id: p.id }))
             }
         }
     });
@@ -101,7 +113,7 @@ async function main() {
             }
         }
     });
-    console.log('Created Roles: SUPER_ADMIN, ADMIN');
+    console.log('Created Roles: SUPER_ADMIN (Restricted), ADMIN (Full)');
 
     // 4. Create Super Admin User
     const hashedPassword = await bcrypt.hash('password123', 10);
