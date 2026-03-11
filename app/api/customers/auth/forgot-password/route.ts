@@ -71,12 +71,12 @@ export async function POST(req: NextRequest) {
             html,
             fromName: restaurant.name,
             smtpConfig: restaurant.smtpHost ? {
-                host: restaurant.smtpHost,
+                host: restaurant.smtpHost.trim(),
                 port: restaurant.smtpPort || 587,
-                secure: restaurant.smtpSecure,
+                secure: (restaurant.smtpPort || 587) === 465,
                 auth: {
-                    user: restaurant.smtpUser || "",
-                    pass: restaurant.smtpPass || "",
+                    user: (restaurant.smtpUser || "").trim(),
+                    pass: (restaurant.smtpPass || "").trim().replace(/\s/g, ""),
                 }
             } : undefined
         });

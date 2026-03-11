@@ -7,16 +7,19 @@ function getTransporter() {
     const pass = (process.env.SMTP_PASS || '').trim().replace(/\s/g, ''); // Remove all spaces
     const host = (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
     const port = Number(process.env.SMTP_PORT) || 587;
-    const secure = process.env.SMTP_SECURE === 'true';
+    // CRITICAL: For port 587, 'secure' MUST be false (it uses STARTTLS). 
+    // If 'secure' is true on 587, you get "wrong version number" SSL error.
+    const secure = port === 465; 
 
-    console.log(`🔌 Initializing Transporter: ${host}:${port} (${user})`);
+    console.log(`🔌 Initializing Transporter: ${host}:${port} (Secure: ${secure})`);
 
     return nodemailer.createTransport({
         host,
         port,
         secure,
         auth: { user, pass },
-        // Add timeout for better error handling in serverless
+        // Force STARTTLS if using port 587
+        requireTLS: port === 587,
         connectionTimeout: 10000, 
         greetingTimeout: 10000,
     });

@@ -51,10 +51,13 @@ export async function POST(req: NextRequest) {
         // Build custom SMTP config if restaurant has it configured
         const smtpConfig = (restaurant?.smtpHost && restaurant?.smtpUser && restaurant?.smtpPass)
             ? {
-                host: restaurant.smtpHost,
+                host: restaurant.smtpHost.trim(),
                 port: restaurant.smtpPort || 587,
-                secure: restaurant.smtpSecure || false,
-                auth: { user: restaurant.smtpUser, pass: restaurant.smtpPass }
+                secure: (restaurant.smtpPort || 587) === 465,
+                auth: { 
+                    user: restaurant.smtpUser.trim(), 
+                    pass: restaurant.smtpPass.trim().replace(/\s/g, '') 
+                }
             }
             : undefined
 

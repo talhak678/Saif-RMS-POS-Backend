@@ -77,15 +77,15 @@ export async function POST(req: NextRequest) {
             </div>
         `;
 
-        // Generate SMTP config (exact same as newsletter/forgot-password)
+        // Generate SMTP config
         const smtpConfig = (restaurant.smtpHost && restaurant.smtpUser && restaurant.smtpPass)
             ? {
-                host: restaurant.smtpHost,
+                host: restaurant.smtpHost.trim(),
                 port: restaurant.smtpPort || 587,
-                secure: restaurant.smtpSecure || false,
+                secure: (restaurant.smtpPort || 587) === 465,
                 auth: {
-                    user: restaurant.smtpUser,
-                    pass: restaurant.smtpPass
+                    user: restaurant.smtpUser.trim(),
+                    pass: restaurant.smtpPass.trim().replace(/\s/g, '')
                 }
             } : undefined;
 
