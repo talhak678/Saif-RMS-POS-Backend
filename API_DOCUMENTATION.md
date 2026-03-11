@@ -144,6 +144,32 @@ Delete a user.
 
 ---
 
+### POST `/api/users/set-push-token`
+Save or update the Expo Push Token for the currently authenticated user. This token is used to send push notifications to the user's mobile device via Expo.
+
+**Authentication:** Required (Bearer Token)
+
+**Request Body:**
+```json
+{
+  "pushToken": "ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]"
+}
+```
+
+**Validation:**
+- `pushToken`: Required, string.
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Push token set successfully",
+  "data": null
+}
+```
+
+---
+
 ### 🔐 Password Reset Flow (3 Steps)
 
 The password reset is split into three separate steps for better security:
@@ -1800,9 +1826,27 @@ Delete notification.
 
 ---
 
-## 16. Dashboard Analytics
+---
 
-### GET `/api/dashboard`
+### 📱 Mobile Push Notifications (Expo)
+The system automatically sends push notifications to **Merchant Admin** and **Cashier / POS Operator** users when a new order is received.
+
+**Triggers:**
+1. **POS Order:** When an order is created via the POS (`POST /api/orders`).
+2. **Website Order:** When a customer places an order via the website (`POST /api/customers/orders`).
+
+**Notification Content:**
+- **Title:** `New Order! 🛍️` or `New Online Order! 🌐`
+- **Body:** `Naya order # 1024 aya he. Source: POS, Type: DELIVERY`
+- **Data Payload:** Includes `orderId` and `orderNo` for deep-linking.
+
+**Requirements:**
+- The user must have called `POST /api/users/set-push-token` with a valid Expo push token.
+- Only users with the roles `Merchant Admin` or `Cashier / POS Operator` receive these alerts.
+
+---
+
+## 16. Dashboard Analytics
 Smart dashboard endpoint — returns **different data depending on the caller's role and query params**.
 
 **Authentication:** Required (Bearer Token)
