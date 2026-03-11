@@ -46,19 +46,33 @@ interface SendEmailOptions {
 
 export async function sendEmail({ to, subject, text, html, fromName, smtpConfig }: SendEmailOptions) {
     try {
-        const activeTransporter = smtpConfig
-            ? nodemailer.createTransport({
-                ...smtpConfig,
+        let activeTransporter;
+
+        if (smtpConfig) {
+            // 🛡️ Safe Config: Automatically fix 'secure' based on port
+            const port = Number(smtpConfig.port) || 587;
+            const isSecure = port === 465; // Only 465 should be true
+            
+            console.log(`📡 Using Custom SMTP: ${smtpConfig.host}:${port} (Secure: ${isSecure})`);
+            
+            activeTransporter = nodemailer.createTransport({
+                host: (smtpConfig.host || '').trim(),
+                port: port,
+                secure: isSecure,
                 auth: {
                     user: (smtpConfig.auth.user || '').trim(),
                     pass: (smtpConfig.auth.pass || '').trim().replace(/\s/g, '')
-                }
-            })
-            : getTransporter();
+                },
+                requireTLS: port === 587,
+                connectionTimeout: 10000,
+            });
+        } else {
+            activeTransporter = getTransporter();
+        }
 
         const fromEmail = smtpConfig ? smtpConfig.auth.user.trim() : (process.env.SMTP_USER || '').trim();
 
-        console.log(`📡 Attempting to send email to: ${to} via ${fromEmail}`);
+        console.log(`📡 Sending email to: ${to} from: ${fromEmail}`);
 
         const info = await activeTransporter.sendMail({
             from: `"${fromName || 'Saif RMS'}" <${fromEmail}>`,
