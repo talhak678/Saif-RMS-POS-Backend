@@ -49,6 +49,7 @@ model User {
   otp          String?
   otpExpires   DateTime?   @map("otp_expires")
   otpVerified  Boolean     @default(false) @map("otp_verified")
+  pushToken    String?     @map("push_token")
 
   @@map("users")
 }

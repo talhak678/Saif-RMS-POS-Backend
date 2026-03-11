@@ -166,6 +166,34 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
                     console.log(`🔔 Notifications created for ${users.length} users.`);
                 }
 
+                // --- ADDED: Expo Push Notifications ---
+                const staffWithTokens = await prisma.user.findMany({
+                    where: {
+                        restaurantId: fullOrder.branch.restaurantId,
+                        role: {
+                            name: {
+                                in: ['Merchant Admin', 'Cashier / POS Operator']
+                            }
+                        },
+                        pushToken: { not: null }
+                    },
+                    select: { pushToken: true }
+                });
+
+                const pushTokens = staffWithTokens.map(u => u.pushToken as string).filter(Boolean);
+
+                if (pushTokens.length > 0) {
+                    const { sendExpoPushNotification } = await import('@/lib/notifications');
+                    await sendExpoPushNotification(
+                        pushTokens,
+                        "New Order! 🛍️",
+                        `New POS order # ${fullOrder.orderNo} Recieved. Source: ${fullOrder.source}, Type: ${fullOrder.type}`,
+                        { orderId: fullOrder.id, orderNo: fullOrder.orderNo }
+                    );
+                    console.log(`📱 Push notifications sent to ${pushTokens.length} staff members.`);
+                }
+                // --- END ADDED ---
+
                 // 2. Send Email Alert to Restaurant Owner
                 const notifyEmail = fullOrder.branch.restaurant.notificationEmail || fullOrder.branch.restaurant.contactEmail;
                 if (notifyEmail && fullOrder.source === 'POS') {
