@@ -101,7 +101,8 @@ export async function POST(req: NextRequest) {
 
         if (!emailResult.success) {
             console.error('❌ Email Dispatch Error:', emailResult.error);
-            return errorResponse('Email service currently unavailable. Please try again later.', null, 500);
+            const errorMsg = (emailResult.error as any)?.message || 'Email service currently unavailable';
+            return errorResponse(`Email Error: ${errorMsg}`, null, 500);
         }
 
         // Only create the customer if email report says "Success"

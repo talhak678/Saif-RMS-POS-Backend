@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
             </div>
         `;
 
-        await sendEmail({
+        const emailResult = await sendEmail({
             to: email,
             subject: "Password Reset Request",
             html,
@@ -80,6 +80,15 @@ export async function POST(req: NextRequest) {
                 }
             } : undefined
         });
+
+        if (!emailResult.success) {
+            console.error('❌ Forgot Password Email Error:', emailResult.error);
+            const errorMsg = (emailResult.error as any)?.message || 'Email service unavailable';
+            return NextResponse.json(
+                { success: false, message: `Email Error: ${errorMsg}` },
+                { status: 500 }
+            );
+        }
 
         return NextResponse.json({
             success: true,
