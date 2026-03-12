@@ -170,6 +170,24 @@ Save or update the Expo Push Token for the currently authenticated user. This to
 
 ---
 
+### POST `/api/users/delete-push-token`
+Remove the Expo Push Token for the currently authenticated user. Use this during logout or when the user disables notifications in the app settings.
+
+**Authentication:** Required (Bearer Token)
+
+**Request Body:** Not required (empty)
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Push token deleted successfully",
+  "data": null
+}
+```
+
+---
+
 ### 🔐 Password Reset Flow (3 Steps)
 
 The password reset is split into three separate steps for better security:
