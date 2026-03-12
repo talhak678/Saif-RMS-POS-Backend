@@ -74,7 +74,8 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
             deliveryAddress,
             deliveryLat,
             deliveryLng,
-            deliveryCharge
+            deliveryCharge,
+            loyaltyAmount
         } = validation.data
 
         // Security check: Verify the branchId belongs to the correct restaurant
@@ -101,6 +102,7 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
                     deliveryLat,
                     deliveryLng,
                     deliveryCharge,
+                    loyaltyAmount,
                     items: {
                         create: items.map((item: any) => ({
                             menuItemId: item.menuItemId,
@@ -110,6 +112,32 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
                     },
                 } as any,
             })
+
+            // Handle Loyalty Redemption
+            if (loyaltyAmount > 0 && customerId) {
+                const customer = await tx.customer.findUnique({
+                    where: { id: customerId },
+                    select: { loyaltyPoints: true }
+                });
+
+                if (!customer || customer.loyaltyPoints < loyaltyAmount) {
+                    throw new Error('Insufficent loyalty points');
+                }
+
+                await tx.customer.update({
+                    where: { id: customerId },
+                    data: { loyaltyPoints: { decrement: loyaltyAmount } }
+                });
+
+                await (tx as any).loyaltyTrx.create({
+                    data: {
+                        points: loyaltyAmount,
+                        type: 'REDEEMED',
+                        customerId: customerId,
+                        orderId: order.id
+                    }
+                });
+            }
 
             await tx.payment.create({
                 data: {

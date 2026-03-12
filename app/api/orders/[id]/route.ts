@@ -80,28 +80,42 @@ export const PUT = withAuth(async (req, { params, auth }) => {
         // 💰 Loyalty Points Logic
         if (status === 'DELIVERED' && order.customerId) {
             try {
+                // Fetch loyalty percentage setting
+                const loyaltySetting = await prisma.setting.findUnique({
+                    where: {
+                        restaurantId_key: {
+                            restaurantId: order.branch.restaurantId,
+                            key: 'loyalty_percentage'
+                        }
+                    }
+                });
+
+                const percentage = loyaltySetting ? parseFloat(loyaltySetting.value) : 2; // Default to 2%
+
                 // Check if already earned points for this order
                 const existingTrx = await (prisma as any).loyaltyTrx.findFirst({
                     where: { orderId: order.id, type: 'EARNED' }
                 });
 
                 if (!existingTrx) {
-                    const pointsToAward = Number(order.total);
+                    const pointsToAward = Number(order.total) * (percentage / 100);
+                    const pointsFinal = Math.round(pointsToAward * 100) / 100;
+
                     await prisma.$transaction([
                         prisma.customer.update({
                             where: { id: order.customerId },
-                            data: { loyaltyPoints: { increment: pointsToAward } }
+                            data: { loyaltyPoints: { increment: pointsFinal } }
                         }),
                         (prisma as any).loyaltyTrx.create({
                             data: {
-                                points: pointsToAward,
+                                points: pointsFinal,
                                 type: 'EARNED',
                                 customerId: order.customerId,
                                 orderId: order.id
                             }
                         })
                     ]);
-                    console.log(`🎁 Awarded ${pointsToAward} loyalty points to customer ${order.customerId}`);
+                    console.log(`🎁 Awarded ${pointsFinal} loyalty points (${percentage}%) to customer ${order.customerId}`);
                 }
             } catch (loyaltyError) {
                 console.error('Failed to process loyalty points:', loyaltyError);

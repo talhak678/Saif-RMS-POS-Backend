@@ -20,6 +20,7 @@ export const orderCreateSchema = z.object({
     deliveryLat: z.number().optional().nullable(),
     deliveryLng: z.number().optional().nullable(),
     deliveryCharge: z.number().optional().nullable(),
+    loyaltyAmount: z.number().optional().default(0),
 })
 
 export const orderUpdateSchema = z.object({
