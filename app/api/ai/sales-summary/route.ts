@@ -32,6 +32,12 @@ export async function POST(req: NextRequest) {
     const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total), 0);
     const orderCount = orders.length;
 
+    // Breakdown by source
+    const sourceBreakdown = orders.reduce((acc, order) => {
+      acc[order.source] = (acc[order.source] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
     const itemCounts: Record<string, number> = {};
     orders.forEach(order => {
       order.items.forEach(item => {
@@ -43,17 +49,23 @@ export async function POST(req: NextRequest) {
     const sortedItems = Object.entries(itemCounts).sort((a, b) => b[1] - a[1]);
     const topItem = sortedItems[0] ? `${sortedItems[0][0]} (${sortedItems[0][1]} sold)` : "No items sold";
 
-    const systemPrompt = `You are a data analyst for a restaurant. Your job is to convert raw sales data into a professional and clear summary for the restaurant owner. 
-    Focus on key metrics: revenue, order count, and top items. 
-    Use a bulleted list for clarity. If the data is empty, mention that no sales were recorded.`;
+    const systemPrompt = `You are an expert restaurant business analyst. Your job is to convert raw sales data into a professional, clear, and actionable daily performance summary for the restaurant owner. 
+    Focus on key metrics: revenue, order count, top performing items, and order sources. 
+    Use a professional tone. If data is missing, report the status as "No activity".`;
 
-    const userPrompt = `Restaurant Sales Summary for ${targetDate.toDateString()}
+    const userPrompt = `Restaurant Performance Report for ${targetDate.toDateString()}
+    
+    KEY METRICS:
     - Total Orders: ${orderCount}
     - Total Revenue: $${totalRevenue.toFixed(2)}
-    - Top Selling Item: ${topItem}
-    - Source Breakdown: (POS vs Website)
+    - Star Performer (Top Item): ${topItem}
     
-    Please provide a concise, professional performance summary.`;
+    SOURCE BREAKDOWN:
+    - Website Orders: ${sourceBreakdown.WEBSITE || 0}
+    - POS Orders: ${sourceBreakdown.POS || 0}
+    - Mobile Orders: ${sourceBreakdown.MOBILE || 0}
+    
+    Please provide a concise but professional performance summary. Include a brief note on which channel performed better today.`;
 
     const summary = await generateContent(userPrompt, systemPrompt);
 

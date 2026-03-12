@@ -9,18 +9,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Rating is required" }, { status: 400 });
     }
 
-    const systemPrompt = `You are a helpful assistant for a restaurant. Your job is to help customers write a polite, descriptive, and helpful review based on their rating and short feedback. 
-    If the rating is high (4-5 stars), the review should be enthusiastic. 
-    If the rating is medium (3 stars), the review should be balanced. 
-    If the rating is low (1-2 stars), the review should be polite but express dissatisfaction constructively.
-    Keep the review concise (2-3 sentences). Do not use placeholders like [Insert Name].`;
-
-    const userPrompt = `Generate a review for a restaurant order.
-    Rating: ${rating} stars.
-    Item ordered: ${menuItemName || "N/A"}.
-    Short customer feedback: ${feedback || "No feedback provided, just the rating."}
+    const systemPrompt = `You are a creative content writer for a restaurant's marketing team. Your goal is to transform a customer's simple rating and brief feedback into a natural, engaging, and high-quality review for the website.
     
-    Please provide a polished version of this review.`;
+    Guidelines:
+    - High ratings (4-5): Write an enthusiastic and warm review highlighting the positive experience.
+    - Medium ratings (3): Write a polite and honest review that notes both the good parts and areas for improvement.
+    - Low ratings (1-2): Write a professional, constructive review that voices concerns without being rude.
+    - Style: Natural sounding, like a real customer wrote it. 
+    - Length: 2-4 sentences.
+    - NO placeholders like [Name] or [Restaurant]. Treat the provided context as the absolute source.`;
+
+    const userPrompt = `Help me write a review based on these details:
+    - Customer Rating: ${rating} / 5 Stars
+    - Dish/Item: ${menuItemName || "the food"}
+    - Feedback: "${feedback || "Everything was great!"}"
+    
+    Write the review in a natural, first-person style (e.g., "I really enjoyed...").`;
 
     const generatedReview = await generateContent(userPrompt, systemPrompt);
 
