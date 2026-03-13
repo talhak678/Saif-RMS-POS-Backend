@@ -15,7 +15,15 @@ export async function POST(req: NextRequest) {
     const start = startOfDay(targetDate);
     const end = endOfDay(targetDate);
 
-    // Fetch daily sales data
+    // 1. Fetch the full Menu Catalog for context
+    const menuItems = await prisma.menuItem.findMany({
+      where: { category: { restaurantId } },
+      include: { category: true }
+    });
+
+    const menuContext = menuItems.map(m => `${m.name} (${m.category.name}) - $${m.price}`).join(", ");
+
+    // 2. Fetch daily sales data with full detail
     const orders = await prisma.order.findMany({
       where: {
         branch: { restaurantId },
@@ -23,6 +31,8 @@ export async function POST(req: NextRequest) {
         status: "DELIVERED",
       },
       include: {
+        customer: true,
+        payment: true,
         items: {
           include: { menuItem: true },
         },
@@ -32,11 +42,14 @@ export async function POST(req: NextRequest) {
     const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total), 0);
     const orderCount = orders.length;
 
-    // Breakdown by source
-    const sourceBreakdown = orders.reduce((acc, order) => {
-      acc[order.source] = (acc[order.source] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    // Detailed metadata for deeper analysis
+    const orderDetails = orders.map(o => ({
+      customer: o.customer?.name || "Anonymous",
+      total: o.total,
+      type: o.type, // DINE_IN, DELIVERY, etc.
+      payment: o.payment?.method || "Unspecified", // STRIPE, CASH, etc.
+      items: o.items.map(i => `${i.quantity}x ${i.menuItem.name}`).join(", ")
+    }));
 
     const itemCounts: Record<string, number> = {};
     orders.forEach(order => {
@@ -47,28 +60,37 @@ export async function POST(req: NextRequest) {
     });
 
     const sortedItems = Object.entries(itemCounts).sort((a, b) => b[1] - a[1]);
-    const topItem = sortedItems[0] ? `${sortedItems[0][0]} (${sortedItems[0][1]} sold)` : "No items sold";
+    const topItems = sortedItems.slice(0, 10).map(i => `${i[0]} (${i[1]} units)`).join(", ");
 
-    const systemPrompt = `You are an expert restaurant business analyst. Your job is to convert raw sales data into a professional, clear, and actionable daily performance summary for the restaurant owner. 
-    Focus on key metrics: revenue, order count, top performing items, and order sources. 
-    Use a professional tone. If data is missing, report the status as "No activity".
-    PRIORITY: If there are specific user instructions or questions, address them directly in the summary.`;
+    const systemPrompt = `You are a Senior Strategic Business Consultant for a high-end restaurant group. Your task is to provide an extremely detailed, high-level executive report on daily performance.
+    
+    KNOWLEDGE BASE:
+    - Full Menu Options: [ ${menuContext} ]
+    - You have visibility into customer identities, payment preferences (CASH vs CARD), and service types (DINE-IN vs DELIVERY).
+    
+    INSTRUCTIONS FOR REPORT STRUCTURE:
+    1. EXECUTIVE SUMMARY: A high-level view of the day's financial health.
+    2. REVENUE ANALYSIS: Deep dive into order values, payment methods, and platform performance.
+    3. PRODUCT PERFORMANCE: Analyze what was sold vs what is on the menu. Identify "Star" items and "Underperforming" items.
+    4. CUSTOMER INSIGHTS: Mention specific regular customers by name if they ordered. Analyze customer retention.
+    5. STRATEGIC RECOMMENDATIONS: Based on the data, suggest 2-3 specific actions the manager should take tomorrow.
+    
+    TONE & LENGTH:
+    - Professional, analytical, and verbose. 
+    - DO NOT provide a short summary. Aim for a full, comprehensive report (300-500 words).
+    - Use Markdown headers, bold text, and bullet points for readability.`;
 
-    const userPrompt = `Restaurant Performance Report for ${targetDate.toDateString()}
+    const userPrompt = `DAILY ANALYTICS FOR ${targetDate.toDateString()}:
+    - Order Count: ${orderCount}
+    - Revenue: $${totalRevenue.toFixed(2)}
+    - Top Performance List: ${topItems || "None"}
     
-    KEY METRICS:
-    - Total Orders: ${orderCount}
-    - Total Revenue: $${totalRevenue.toFixed(2)}
-    - Star Performer (Top Item): ${topItem}
+    RAW TRANSACTION LOG:
+    ${JSON.stringify(orderDetails.slice(0, 100), null, 2)}
     
-    SOURCE BREAKDOWN:
-    - Website Orders: ${sourceBreakdown.WEBSITE || 0}
-    - POS Orders: ${sourceBreakdown.POS || 0}
-    - Mobile Orders: ${sourceBreakdown.MOBILE || 0}
-
-    USER SPECIFIC INSTRUCTIONS/QUESTIONS: "${instructions || "None"}"
+    MERCHANT SPECIFIC QUERY/FOCUS: "${instructions || "Perform a full comprehensive business analysis."}"
     
-    Please provide a concise but professional performance summary. Ensure you address the USER SPECIFIC INSTRUCTIONS if provided.`;
+    Generate the full executive report now. Use the provided Menu Knowledge to suggest cross-selling or menu optimizations.`;
 
     const summary = await generateContent(userPrompt, systemPrompt);
 
