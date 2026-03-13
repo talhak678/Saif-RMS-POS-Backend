@@ -170,6 +170,24 @@ Save or update the Expo Push Token for the currently authenticated user. This to
 
 ---
 
+### POST `/api/users/delete-push-token`
+Remove the Expo Push Token for the currently authenticated user. Use this during logout or when the user disables notifications in the app settings.
+
+**Authentication:** Required (Bearer Token)
+
+**Request Body:** Not required (empty)
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Push token deleted successfully",
+  "data": null
+}
+```
+
+---
+
 ### 🔐 Password Reset Flow (3 Steps)
 
 The password reset is split into three separate steps for better security:
@@ -2516,18 +2534,16 @@ enum SubscriptionRequestStatus {
 ### GET `/api/subscription-prices`
 Get all subscription price entries.
 
-**Authentication:** Required (Bearer Token)
-
 **Query Parameters:**
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `restaurantId` | string | Optional | Filter by restaurant ID. Super Admins can pass any ID; regular users see their own restaurant only. |
+| `restaurantId` | string | ❌ Optional | Filter by restaurant ID. |
+| `isDefault` | boolean | ❌ Optional | `true` for system-wide default prices, `false` for restaurant-specific prices. |
 
 **Success Response (200):**
 ```json
 {
   "success": true,
-  "message": "Operation successful",
   "data": [
     {
       "id": "clxxx...",
@@ -2535,20 +2551,10 @@ Get all subscription price entries.
       "price": "2999.00",
       "billingCycle": "MONTHLY",
       "isActive": true,
-      "features": [
-        "Unlimited Orders",
-        "Custom Domain",
-        "Priority Support",
-        "Advanced Analytics"
-      ],
-      "restaurantId": "clxxx...",
-      "restaurant": {
-        "id": "clxxx...",
-        "name": "Saif's Kitchen",
-        "slug": "saifs-kitchen"
-      },
-      "createdAt": "2026-02-25T10:00:00.000Z",
-      "updatedAt": "2026-02-25T10:00:00.000Z"
+      "isDefault": true,
+      "features": ["Feature A", "Feature B"],
+      "restaurantId": null,
+      "createdAt": "2026-03-13T10:00:00Z"
     }
   ]
 }
@@ -2584,10 +2590,11 @@ Create a new subscription price entry. **Super Admin only.**
 |-------|------|----------|-------|
 | `plan` | enum | ✅ Yes | One of: `FREE`, `BASIC`, `PREMIUM`, `ENTERPRISE` |
 | `price` | number | ✅ Yes | Non-negative number |
-| `billingCycle` | string | ✅ Yes | e.g. `MONTHLY`, `YEARLY`. Defaults to `MONTHLY` |
+| `billingCycle` | string | ✅ Yes | e.g. `MONTHLY`, `YEARLY`. |
 | `isActive` | boolean | ❌ Optional | Defaults to `true` |
-| `features` | string[] | ❌ Optional | Array of feature strings. Defaults to `[]` |
-| `restaurantId` | string | ✅ Yes | Valid restaurant ID |
+| `features` | string[] | ❌ Optional | Array of feature strings. |
+| `restaurantId` | string | ❌ Optional | Valid restaurant ID. If omitted, price is marked as `isDefault: true`. |
+| `isDefault` | boolean | ❌ Optional | Automatically set based on `restaurantId`. |
 
 **Side Effect:**  
 After creating a price entry, the restaurant's `subscription`, `subStartDate`, and `subEndDate` fields are automatically updated.
