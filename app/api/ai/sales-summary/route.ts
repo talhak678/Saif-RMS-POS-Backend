@@ -5,7 +5,7 @@ import { startOfDay, endOfDay } from "date-fns";
 
 export async function POST(req: NextRequest) {
   try {
-    const { date, restaurantId } = await req.json();
+    const { date, restaurantId, instructions } = await req.json();
 
     if (!restaurantId) {
       return NextResponse.json({ error: "Restaurant ID is required" }, { status: 400 });
@@ -51,7 +51,8 @@ export async function POST(req: NextRequest) {
 
     const systemPrompt = `You are an expert restaurant business analyst. Your job is to convert raw sales data into a professional, clear, and actionable daily performance summary for the restaurant owner. 
     Focus on key metrics: revenue, order count, top performing items, and order sources. 
-    Use a professional tone. If data is missing, report the status as "No activity".`;
+    Use a professional tone. If data is missing, report the status as "No activity".
+    PRIORITY: If there are specific user instructions or questions, address them directly in the summary.`;
 
     const userPrompt = `Restaurant Performance Report for ${targetDate.toDateString()}
     
@@ -64,8 +65,10 @@ export async function POST(req: NextRequest) {
     - Website Orders: ${sourceBreakdown.WEBSITE || 0}
     - POS Orders: ${sourceBreakdown.POS || 0}
     - Mobile Orders: ${sourceBreakdown.MOBILE || 0}
+
+    USER SPECIFIC INSTRUCTIONS/QUESTIONS: "${instructions || "None"}"
     
-    Please provide a concise but professional performance summary. Include a brief note on which channel performed better today.`;
+    Please provide a concise but professional performance summary. Ensure you address the USER SPECIFIC INSTRUCTIONS if provided.`;
 
     const summary = await generateContent(userPrompt, systemPrompt);
 

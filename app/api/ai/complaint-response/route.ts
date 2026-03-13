@@ -3,7 +3,7 @@ import { generateContent } from "@/lib/gemini";
 
 export async function POST(req: NextRequest) {
   try {
-    const { complaint, customerName, restaurantName } = await req.json();
+    const { complaint, customerName, restaurantName, instructions } = await req.json();
 
     if (!complaint) {
       return NextResponse.json({ error: "Complaint text is required" }, { status: 400 });
@@ -21,13 +21,15 @@ export async function POST(req: NextRequest) {
     Guidelines:
     - Keep it under 150 words.
     - Personalize the response using the customer's name.
-    - DO NOT use placeholders like [Insert Link] or [Insert Phone].`;
+    - DO NOT use placeholders like [Insert Link] or [Insert Phone].
+    - PRIORITY: If there are specific merchant instructions, strictly follow them.`;
 
     const userPrompt = `Draft a response to this complaint:
     - Customer Name: ${customerName || "Valued Customer"}
     - Complaint Details: "${complaint}"
+    - MERCHANT SPECIFIC INSTRUCTIONS: "${instructions || "None"}"
     
-    Provide a draft that feels personal and solves the customer's problem.`;
+    Provide a draft that feels personal and solves the customer's problem. Ensure you strictly follow the MERCHANT SPECIFIC INSTRUCTIONS if provided.`;
 
     const responseDraft = await generateContent(userPrompt, systemPrompt);
 
