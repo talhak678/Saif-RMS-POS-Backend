@@ -7,7 +7,7 @@ export const subscriptionPriceSchema = z.object({
     isActive: z.boolean().optional().default(true),
     isDefault: z.boolean().optional().default(false),
     features: z.array(z.string()).optional().default([]),
-    restaurantId: z.string().optional(),
+    restaurantId: z.string().optional().nullable(),
 })
 
 export const subscriptionPriceUpdateSchema = z.object({
@@ -17,4 +17,5 @@ export const subscriptionPriceUpdateSchema = z.object({
     isActive: z.boolean().optional(),
     isDefault: z.boolean().optional(),
     features: z.array(z.string()).optional(),
+    restaurantId: z.string().optional().nullable(),
 })
