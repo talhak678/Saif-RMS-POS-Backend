@@ -42,8 +42,16 @@ export async function POST(req: NextRequest) {
     const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total), 0);
     const orderCount = orders.length;
 
+    // Aggregate Source Breakdown
+    const sourceBreakdown = orders.reduce((acc, order) => {
+      acc[order.source] = (acc[order.source] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
     // Detailed metadata for deeper analysis
     const orderDetails = orders.map(o => ({
+      orderNo: o.orderNo,
+      source: o.source, // POS, WEBSITE, MOBILE
       customer: o.customer?.name || "Anonymous",
       total: o.total,
       type: o.type, // DINE_IN, DELIVERY, etc.
@@ -62,35 +70,47 @@ export async function POST(req: NextRequest) {
     const sortedItems = Object.entries(itemCounts).sort((a, b) => b[1] - a[1]);
     const topItems = sortedItems.slice(0, 10).map(i => `${i[0]} (${i[1]} units)`).join(", ");
 
-    const systemPrompt = `You are a Senior Strategic Business Consultant for a high-end restaurant group. Your task is to provide an extremely detailed, high-level executive report on daily performance.
+    const systemPrompt = `You are a Senior Strategic Business Consultant for a high-end restaurant group. You have COMPLETE access to the restaurant's database for the requested date.
     
     KNOWLEDGE BASE:
     - Full Menu Options: [ ${menuContext} ]
-    - You have visibility into customer identities, payment preferences (CASH vs CARD), and service types (DINE-IN vs DELIVERY).
+    - Full Transaction History: You can see exactly which channel an order came from (POS, WEBSITE, or MOBILE).
+    - Customer Identities: You know who bought what.
+    - Payment Methods: You know if they paid by CASH, CARD, or STRIPE.
     
-    INSTRUCTIONS FOR REPORT STRUCTURE:
-    1. EXECUTIVE SUMMARY: A high-level view of the day's financial health.
-    2. REVENUE ANALYSIS: Deep dive into order values, payment methods, and platform performance.
-    3. PRODUCT PERFORMANCE: Analyze what was sold vs what is on the menu. Identify "Star" items and "Underperforming" items.
-    4. CUSTOMER INSIGHTS: Mention specific regular customers by name if they ordered. Analyze customer retention.
-    5. STRATEGIC RECOMMENDATIONS: Based on the data, suggest 2-3 specific actions the manager should take tomorrow.
+    CRITICAL RULE:
+    - NEVER say "I don't know" or "I don't have this information." 
+    - If a user asks for POS vs Website counts, use the SOURCE BREAKDOWN provided.
+    - If data for a specific customer is asked, search the RAW TRANSACTION LOG.
+    - If there is ZERO data for a day, report: "No transactions were recorded on this day."
+    
+    REPORT STRUCTURE:
+    1. EXECUTIVE SUMMARY: High-level financial health.
+    2. CHANNEL PERFORMANCE: Exact breakdown of orders from POS, WEBSITE, and MOBILE.
+    3. REVENUE & PAYMENTS: Deep dive into order values and payment preferences.
+    4. PRODUCT PERFORMANCE: Analyze sales vs full menu catalog.
+    5. CUSTOMER INSIGHTS: Specific customer names and their habits.
+    6. STRATEGIC RECOMMENDATIONS: Data-driven actions for tomorrow.
     
     TONE & LENGTH:
-    - Professional, analytical, and verbose. 
-    - DO NOT provide a short summary. Aim for a full, comprehensive report (300-500 words).
-    - Use Markdown headers, bold text, and bullet points for readability.`;
+    - Professional, analytical, and highly detailed (300-500 words).
+    - Use Markdown formatting: Headers, bold text, bullet points.`;
 
     const userPrompt = `DAILY ANALYTICS FOR ${targetDate.toDateString()}:
-    - Order Count: ${orderCount}
-    - Revenue: $${totalRevenue.toFixed(2)}
+    - Total Order Count: ${orderCount}
+    - Total Revenue: $${totalRevenue.toFixed(2)}
+    - SOURCE BREAKDOWN (Where orders came from):
+        * POS: ${sourceBreakdown.POS || 0}
+        * WEBSITE: ${sourceBreakdown.WEBSITE || 0}
+        * MOBILE: ${sourceBreakdown.MOBILE || 0}
     - Top Performance List: ${topItems || "None"}
     
-    RAW TRANSACTION LOG:
+    RAW TRANSACTION LOG (First 100):
     ${JSON.stringify(orderDetails.slice(0, 100), null, 2)}
     
     MERCHANT SPECIFIC QUERY/FOCUS: "${instructions || "Perform a full comprehensive business analysis."}"
     
-    Generate the full executive report now. Use the provided Menu Knowledge to suggest cross-selling or menu optimizations.`;
+    Analyze the data and generate the report. Answer any specific questions about POS/Website sources using the data provided.`;
 
     const summary = await generateContent(userPrompt, systemPrompt);
 
