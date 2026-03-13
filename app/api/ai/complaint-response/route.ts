@@ -3,36 +3,30 @@ import { generateContent } from "@/lib/gemini";
 
 export async function POST(req: NextRequest) {
   try {
-    const { complaint, customerName, restaurantName, instructions } = await req.json();
+    const { complaint, customerName, restaurantName, instructions, menuItemName } = await req.json();
 
     if (!complaint) {
       return NextResponse.json({ error: "Complaint text is required" }, { status: 400 });
     }
 
-    const systemPrompt = `You are a highly skilled Customer Relations Manager for ${restaurantName || "our restaurant"}. 
-    Your mission is to turn dissatisfied customers into loyal ones by providing exceptionally empathetic, professional, and solution-oriented responses.
+    const systemPrompt = `You are a professional Customer Relations Manager for ${restaurantName || "our restaurant"}. 
+    Your goal is to draft a reply to a customer review/complaint.
     
-    Response Structure:
-    1. Sincere Apology: Acknowledge the specific issue mentioned.
-    2. Empathy: Show that you understand why they are upset.
-    3. Resolution: Propose a specific next step (e.g., a refund, a discount on the next order, or a direct call from the manager).
-    4. Sign-off: End with a professional closing.
-    
-    Guidelines:
-    - Keep it under 150 words.
-    - Personalize the response using the customer's name.
-    - DO NOT use placeholders like [Insert Link] or [Insert Phone].
-    - PRIORITY: If there are specific merchant instructions, strictly follow them.`;
+    Rules:
+    - ABSOLUTE PRIORITY: Follow the "Merchant Instructions" strictly. If the merchant says "be firm" or "offer a 50% discount", do exactly that.
+    - If no specific instructions, be empathetic and professional.
+    - Personalize the response.
+    - Keep it concise (under 120 words).`;
 
-    const userPrompt = `Draft a response to this complaint:
-    - Customer Name: ${customerName || "Valued Customer"}
-    - Complaint Details: "${complaint}"
-    - MERCHANT SPECIFIC INSTRUCTIONS: "${instructions || "None"}"
+    const userPrompt = `Draft a response for:
+    - Customer: ${customerName || "Valued Customer"}
+    - Item/Product: ${menuItemName || "their order"}
+    - Customer Feedback: "${complaint}"
+    - MERCHANT SPECIFIC INSTRUCTIONS: "${instructions || "Be professional and helpful"}"
     
-    Provide a draft that feels personal and solves the customer's problem. Ensure you strictly follow the MERCHANT SPECIFIC INSTRUCTIONS if provided.`;
+    Task: Write a reply that addresses the feedback while strictly following the MERCHANT SPECIFIC INSTRUCTIONS.`;
 
     const responseDraft = await generateContent(userPrompt, systemPrompt);
-
     return NextResponse.json({ response: responseDraft.trim() });
   } catch (error) {
     console.error("AI Response Generation Error:", error);

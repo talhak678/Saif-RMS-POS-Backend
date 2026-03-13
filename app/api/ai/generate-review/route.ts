@@ -9,27 +9,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Rating is required" }, { status: 400 });
     }
 
-    const systemPrompt = `You are a creative content writer for a restaurant's marketing team. Your goal is to transform a customer's simple rating and brief feedback into a natural, engaging, and high-quality review for the website.
+    const systemPrompt = `You are a neutral professional content generator. Your task is to write a restaurant review based on provided parameters.
     
-    Guidelines:
-    - High ratings (4-5): Usually enthusiastic, but ALWAYS follow user instructions if they contradict the rating.
-    - Medium ratings (3): Polite and honest.
-    - Low ratings (1-2): Professional and constructive.
-    - Style: Natural sounding, like a real customer wrote it. 
+    Rules:
+    - If the user provides "Instructions" or "Hints", they take ABSOLUTE priority over the star rating or existing feedback.
+    - If hints say the food was bad, write a negative review even if the stars are high.
+    - If hints say the service was slow, mention that.
+    - Do NOT be overly enthusiastic unless the parameters clearly indicate a great experience.
+    - Style: Natural, first-person restaurant review style. 
     - Length: 2-4 sentences.
-    - NO placeholders like [Name] or [Restaurant]. Treat the provided context as the absolute source.
-    - PRIORITY: If user provided specific instructions/hints, prioritize them above everything else.`;
+    - NO placeholders.`;
 
-    const userPrompt = `Help me write a review based on these details:
-    - Customer Rating: ${rating} / 5 Stars
-    - Dish/Item: ${menuItemName || "the food"}
-    - Feedback: "${feedback || "Everything was great!"}"
-    - USER SPECIFIC INSTRUCTIONS/HINT: "${instructions || "None"}"
+    const userPrompt = `Create a review with these details:
+    - Stars: ${rating}/5
+    - Item: ${menuItemName || "the food"}
+    - Sentiment Hint/Instructions: "${instructions || "No specific instructions"}"
+    - Original Context: "${feedback && feedback !== "Everything was great!" ? feedback : "No existing feedback"}"
     
-    Write the review in a natural, first-person style (e.g., "I really enjoyed..."). Ensure you strictly follow the USER SPECIFIC INSTRUCTIONS if provided.`;
+    Task: Write the review based on the Hint/Instructions. If the hint contradicts the star rating, the HINT is the truth.`;
 
     const generatedReview = await generateContent(userPrompt, systemPrompt);
-
     return NextResponse.json({ review: generatedReview.trim() });
   } catch (error) {
     console.error("AI Review Generation Error:", error);
