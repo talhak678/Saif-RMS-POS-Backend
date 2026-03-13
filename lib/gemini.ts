@@ -4,22 +4,17 @@ const API_KEY = process.env.GEMINI_API_KEY || "";
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 /**
- * Common AI utility to interact with Gemini
+ * Common AI utility to interact with Gemini Pro
  * @param prompt - The full text prompt for the model
  * @param systemInstruction - Optional system context/instructions
- * @param long - If true, allows extra long responses (for reports)
  */
-export async function generateContent(prompt: string, systemInstruction?: string, long = false) {
+export async function generateContent(prompt: string, systemInstruction?: string) {
   try {
-    const model = genAI.getGenerativeModel({ 
+    const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
-      systemInstruction: systemInstruction,
-      generationConfig: {
-        maxOutputTokens: long ? 8192 : 2048,
-        temperature: 0.7,
-      }
+      systemInstruction: systemInstruction
     });
-    
+
     const result = await model.generateContent(prompt);
     const response = await result.response;
     return response.text();
