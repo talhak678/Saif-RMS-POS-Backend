@@ -20,8 +20,9 @@ function getTransporter() {
         auth: { user, pass },
         // Force STARTTLS if using port 587
         requireTLS: port === 587,
-        connectionTimeout: 10000, 
-        greetingTimeout: 10000,
+        connectionTimeout: 5000, 
+        greetingTimeout: 5000,
+        socketTimeout: 5000,
     });
 }
 
@@ -64,7 +65,9 @@ export async function sendEmail({ to, subject, text, html, fromName, smtpConfig 
                     pass: (smtpConfig.auth.pass || '').trim().replace(/\s/g, '')
                 },
                 requireTLS: port === 587,
-                connectionTimeout: 10000,
+                connectionTimeout: 5000,
+                greetingTimeout: 5000,
+                socketTimeout: 5000,
             });
         } else {
             activeTransporter = getTransporter();
