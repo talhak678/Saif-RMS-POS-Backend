@@ -64,8 +64,7 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
                 restaurantId
             },
             include: {
-                role: true,
-                restaurant: true
+                role: true
             }
         })
 
@@ -73,38 +72,34 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
         let emailSent = false;
         let emailErrorMsg = null;
 
-        if (user.role?.name === 'Merchant Admin' && user.restaurant) {
+        if (user.role?.name === 'Merchant Admin' && restaurantId) {
             try {
-                const htmlContent = getMerchantAdminWelcomeTemplate(
-                    user.name || 'User', 
-                    user.email, 
-                    password, // Send raw password so they know what to login with
-                    user.restaurant.name
-                );
-
-                const smtpConfig = {
-                    host: 'smtp.gmail.com',
-                    port: 587,
-                    secure: false,
-                    auth: {
-                        user: 'info.platteros@gmail.com',
-                        pass: 'ixgm bboc ugmf zerp'.replace(/\s/g, '')
-                    }
-                };
-
-                const emailResponse = await sendEmail({
-                    to: user.email,
-                    subject: 'Welcome to PlatterOS - Your Account is Ready! 🎉',
-                    html: htmlContent,
-                    fromName: 'PlatterOS Team',
-                    smtpConfig
+                // Manually fetch the restaurant to ensure we have all SMTP settings and it's full data
+                const restaurant = await prisma.restaurant.findUnique({
+                    where: { id: restaurantId }
                 });
-                
-                if (emailResponse && emailResponse.success) {
-                    emailSent = true;
-                } else {
-                    emailErrorMsg = emailResponse?.error ? ((emailResponse.error as any).message || String(emailResponse.error)) : 'Unknown error occurred while sending email';
-                    console.error('Failed to send welcome email (sendEmail return):', emailErrorMsg);
+
+                if (restaurant) {
+                    const htmlContent = getMerchantAdminWelcomeTemplate(
+                        user.name || 'User', 
+                        user.email, 
+                        password, // Send raw password so they know what to login with
+                        restaurant.name
+                    );
+
+                    const emailResponse = await sendEmail({
+                        to: user.email,
+                        subject: 'Welcome to PlatterOS - Your Account is Ready! 🎉',
+                        html: htmlContent,
+                        fromName: 'PlatterOS Team'
+                    });
+                    
+                    if (emailResponse && emailResponse.success) {
+                        emailSent = true;
+                    } else {
+                        emailErrorMsg = emailResponse?.error ? ((emailResponse.error as any).message || String(emailResponse.error)) : 'Unknown error occurred while sending email';
+                        console.error('Failed to send welcome email (sendEmail return):', emailErrorMsg);
+                    }
                 }
             } catch (emailError: any) {
                 console.error('Exception while sending welcome email:', emailError);
