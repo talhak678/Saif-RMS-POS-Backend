@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server'
 import { hashPassword } from '@/lib/auth-utils'
 import { userCreateSchema } from '@/lib/validations/user'
 import { withAuth } from '@/lib/with-auth'
+import { sendEmail, getMerchantAdminWelcomeTemplate } from '@/lib/email'
 
 export const GET = withAuth(async (req: NextRequest, { auth }) => {
     try {
@@ -67,6 +68,28 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
                 restaurant: true
             }
         })
+
+        // 📧 SEND WELCOME EMAIL IF ROLE IS 'Merchant Admin'
+        if (user.role?.name === 'Merchant Admin' && user.restaurant) {
+            try {
+                const htmlContent = getMerchantAdminWelcomeTemplate(
+                    user.name || 'User', 
+                    user.email, 
+                    password, // Send raw password so they know what to login with
+                    user.restaurant.name
+                );
+
+                await sendEmail({
+                    to: user.email,
+                    subject: 'Welcome to PlatterOS - Your Account is Ready! 🎉',
+                    html: htmlContent,
+                    fromName: 'PlatterOS Team'
+                });
+            } catch (emailError) {
+                console.error('Failed to send welcome email:', emailError);
+                // We don't fail the user creation if email fails
+            }
+        }
 
         const { password: _, ...sanitizedUser } = user
         return successResponse(sanitizedUser, 'User created successfully', 201)

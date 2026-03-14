@@ -358,3 +358,42 @@ export function getNewOrderRestaurantAlertTemplate(restaurantName: string, order
         </div>
     `
 }
+
+export function getMerchantAdminWelcomeTemplate(name: string, email: string, rawPassword: string, restaurantName: string) {
+    return `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; border: 1px solid #f0f0f0; border-radius: 20px; color: #333; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <div style="background: #5d69b9; width: 60px; height: 60px; border-radius: 15px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+                    <span style="font-size: 30px;">🎉</span>
+                </div>
+                <h2 style="color: #111; margin: 0; font-size: 24px; font-weight: 800;">Welcome to PlatterOS!</h2>
+                <p style="color: #666; margin-top: 10px;">Your restaurant account is ready</p>
+            </div>
+            
+            <p style="font-size: 16px; line-height: 1.6;">Hi <strong>${name}</strong>,</p>
+            <p style="font-size: 16px; line-height: 1.6; color: #555;">
+                We are thrilled to let you know that your account for <strong>${restaurantName}</strong> has been successfully created on PlatterOS (formerly RMS POS).
+            </p>
+            <p style="font-size: 16px; line-height: 1.6; color: #555;">
+                You can now log in to the admin dashboard and start managing your restaurant, menu, and orders. Here are your login credentials:
+            </p>
+            
+            <div style="background-color: #f9fafb; padding: 30px; border-radius: 16px; margin: 30px 0; border: 1px solid #e5e7eb;">
+                <p style="margin: 0 0 10px 0; font-size: 15px;"><strong>Login URL:</strong> <a href="https://platteros.com/login" style="color: #5d69b9; text-decoration: none;">platteros.com/login</a></p>
+                <p style="margin: 0 0 10px 0; font-size: 15px;"><strong>Email (Username):</strong> ${email}</p>
+                <p style="margin: 0; font-size: 15px;"><strong>Password:</strong> <span style="font-family: monospace; background: #eee; padding: 3px 6px; border-radius: 4px;">${rawPassword}</span></p>
+            </div>
+            
+            <p style="font-size: 14px; color: #666; text-align: center; background: #fffbe6; padding: 12px; border-radius: 8px; border: 1px solid #ffe58f;">
+                <strong>Security Recommendation:</strong> For security reasons, we strongly advise you to change your password immediately after logging in for the first time.
+            </p>
+            
+            <p style="font-size: 16px; line-height: 1.6; color: #555; margin-top: 30px;">
+                If you have any questions or need assistance setting up your menu, please reach out to our support team.
+            </p>
+            
+            <hr style="border: 0; border-top: 1px solid #f0f0f0; margin: 35px 0;">
+            <p style="font-size: 12px; color: #999; text-align: center;">Welcome aboard! Team PlatterOS</p>
+        </div>
+    `
+}
