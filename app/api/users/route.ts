@@ -82,11 +82,22 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
                     user.restaurant.name
                 );
 
+                const smtpConfig = {
+                    host: 'smtp.gmail.com',
+                    port: 587,
+                    secure: false,
+                    auth: {
+                        user: 'info.platteros@gmail.com',
+                        pass: 'ixgm bboc ugmf zerp'.replace(/\s/g, '')
+                    }
+                };
+
                 const emailResponse = await sendEmail({
                     to: user.email,
                     subject: 'Welcome to PlatterOS - Your Account is Ready! 🎉',
                     html: htmlContent,
-                    fromName: 'PlatterOS Team'
+                    fromName: 'PlatterOS Team',
+                    smtpConfig
                 });
                 
                 if (emailResponse && emailResponse.success) {
