@@ -62,21 +62,6 @@ export const PUT = withAuth(async (req: NextRequest, { params, auth }) => {
         // If approved, you might want to automatically update the restaurant plan or just notify.
         // Usually, Super Admin would manually update the plan after approval/payment.
 
-        // Notify the restaurant users about the status update
-        const restaurantUsers = await prisma.user.findMany({
-            where: { restaurantId: updated.restaurantId }
-        })
-
-        for (const user of restaurantUsers) {
-            await prisma.notification.create({
-                data: {
-                    userId: user.id,
-                    message: `Your subscription request for the ${updated.plan} plan has been ${status.toLowerCase()}.`,
-                    isRead: false
-                }
-            })
-        }
-
         return successResponse(updated, `Subscription request ${status.toLowerCase()} successfully`)
     } catch (error: any) {
         return errorResponse('Failed to update subscription request', error.message, 500)

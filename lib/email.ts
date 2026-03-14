@@ -363,9 +363,6 @@ export function getMerchantAdminWelcomeTemplate(name: string, email: string, raw
     return `
         <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; border: 1px solid #f0f0f0; border-radius: 20px; color: #333; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
             <div style="text-align: center; margin-bottom: 30px;">
-                <div style="background: #5d69b9; width: 60px; height: 60px; border-radius: 15px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
-                    <span style="font-size: 30px;">🎉</span>
-                </div>
                 <h2 style="color: #111; margin: 0; font-size: 24px; font-weight: 800;">Welcome to PlatterOS!</h2>
                 <p style="color: #666; margin-top: 10px;">Your restaurant account is ready</p>
             </div>
@@ -379,7 +376,7 @@ export function getMerchantAdminWelcomeTemplate(name: string, email: string, raw
             </p>
             
             <div style="background-color: #f9fafb; padding: 30px; border-radius: 16px; margin: 30px 0; border: 1px solid #e5e7eb;">
-                <p style="margin: 0 0 10px 0; font-size: 15px;"><strong>Login URL:</strong> <a href="https://platteros.com/login" style="color: #5d69b9; text-decoration: none;">platteros.com/login</a></p>
+                <p style="margin: 0 0 10px 0; font-size: 15px;"><strong>Login URL:</strong> <a href="https://app.platteros.com/" style="color: #5d69b9; text-decoration: none;">platteros.com/login</a></p>
                 <p style="margin: 0 0 10px 0; font-size: 15px;"><strong>Email (Username):</strong> ${email}</p>
                 <p style="margin: 0; font-size: 15px;"><strong>Password:</strong> <span style="font-family: monospace; background: #eee; padding: 3px 6px; border-radius: 4px;">${rawPassword}</span></p>
             </div>

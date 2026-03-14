@@ -85,6 +85,8 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
                     html: htmlContent,
                     fromName: 'PlatterOS Team'
                 });
+                console.log('email');
+                
             } catch (emailError) {
                 console.error('Failed to send welcome email:', emailError);
                 // We don't fail the user creation if email fails
