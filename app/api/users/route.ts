@@ -70,6 +70,9 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
         })
 
         // 📧 SEND WELCOME EMAIL IF ROLE IS 'Merchant Admin'
+        let emailSent = false;
+        let emailErrorMsg = null;
+
         if (user.role?.name === 'Merchant Admin' && user.restaurant) {
             try {
                 const htmlContent = getMerchantAdminWelcomeTemplate(
@@ -79,22 +82,38 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
                     user.restaurant.name
                 );
 
-                await sendEmail({
+                const emailResponse = await sendEmail({
                     to: user.email,
                     subject: 'Welcome to PlatterOS - Your Account is Ready! 🎉',
                     html: htmlContent,
                     fromName: 'PlatterOS Team'
                 });
-                console.log('email');
                 
-            } catch (emailError) {
-                console.error('Failed to send welcome email:', emailError);
-                // We don't fail the user creation if email fails
+                if (emailResponse && emailResponse.success) {
+                    emailSent = true;
+                } else {
+                    emailErrorMsg = emailResponse?.error ? ((emailResponse.error as any).message || String(emailResponse.error)) : 'Unknown error occurred while sending email';
+                    console.error('Failed to send welcome email (sendEmail return):', emailErrorMsg);
+                }
+            } catch (emailError: any) {
+                console.error('Exception while sending welcome email:', emailError);
+                emailErrorMsg = emailError.message || String(emailError);
             }
         }
 
         const { password: _, ...sanitizedUser } = user
-        return successResponse(sanitizedUser, 'User created successfully', 201)
+        
+        const responseData = {
+            ...sanitizedUser,
+            emailSent,
+            ...(emailErrorMsg ? { emailError: emailErrorMsg } : {})
+        };
+
+        const responseMessage = emailErrorMsg 
+            ? `User created successfully but failed to send welcome email (${emailErrorMsg})` 
+            : 'User created successfully';
+
+        return successResponse(responseData, responseMessage, 201)
     } catch (error: any) {
         if (error.code === 'P2002') return errorResponse('Email already exists')
         return errorResponse('Failed to create user', error.message, 500)
