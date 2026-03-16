@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server'
 import { hashPassword } from '@/lib/auth-utils'
 import { userCreateSchema } from '@/lib/validations/user'
 import { withAuth } from '@/lib/with-auth'
+import { sendEmail, getMerchantAdminWelcomeTemplate } from '@/lib/email'
 
 export const GET = withAuth(async (req: NextRequest, { auth }) => {
     try {
@@ -63,13 +64,73 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
                 restaurantId
             },
             include: {
-                role: true,
-                restaurant: true
+                role: true
             }
         })
 
+        // 📧 SEND WELCOME EMAIL IF ROLE IS 'Merchant Admin'
+        let emailSent = false;
+        let emailErrorMsg = null;
+
+        if (user.role?.name === 'Merchant Admin' && restaurantId) {
+            try {
+                // Manually fetch the restaurant to ensure we have all SMTP settings and it's full data
+                const restaurant = await prisma.restaurant.findUnique({
+                    where: { id: restaurantId }
+                });
+
+                if (restaurant) {
+                    const htmlContent = getMerchantAdminWelcomeTemplate(
+                        user.name || 'User', 
+                        user.email, 
+                        password, // Send raw password so they know what to login with
+                        restaurant.name
+                    );
+
+                    const smtpConfig = {
+                        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+                        port: Number(process.env.SMTP_PORT) || 587,
+                        secure: Number(process.env.SMTP_PORT) === 465,
+                        auth: {
+                            user: process.env.SMTP_USER || '',
+                            pass: (process.env.SMTP_PASS || '').replace(/\s/g, '')
+                        }
+                    };
+
+                    const emailResponse = await sendEmail({
+                        to: user.email,
+                        subject: 'Welcome to PlatterOS - Your Account is Ready! 🎉',
+                        html: htmlContent,
+                        fromName: 'PlatterOS Team',
+                        smtpConfig
+                    });
+                    
+                    if (emailResponse && emailResponse.success) {
+                        emailSent = true;
+                    } else {
+                        emailErrorMsg = emailResponse?.error ? ((emailResponse.error as any).message || String(emailResponse.error)) : 'Unknown error occurred while sending email';
+                        console.error('Failed to send welcome email (sendEmail return):', emailErrorMsg);
+                    }
+                }
+            } catch (emailError: any) {
+                console.error('Exception while sending welcome email:', emailError);
+                emailErrorMsg = emailError.message || String(emailError);
+            }
+        }
+
         const { password: _, ...sanitizedUser } = user
-        return successResponse(sanitizedUser, 'User created successfully', 201)
+        
+        const responseData = {
+            ...sanitizedUser,
+            emailSent,
+            ...(emailErrorMsg ? { emailError: emailErrorMsg } : {})
+        };
+
+        const responseMessage = emailErrorMsg 
+            ? `User created successfully but failed to send welcome email (${emailErrorMsg})` 
+            : 'User created successfully';
+
+        return successResponse(responseData, responseMessage, 201)
     } catch (error: any) {
         if (error.code === 'P2002') return errorResponse('Email already exists')
         return errorResponse('Failed to create user', error.message, 500)
