@@ -54,6 +54,8 @@ export async function GET(
             slug: restaurant.slug,
             restaurantLogo: restaurant.logo,
             restaurantName: restaurant.name,
+            restaurantPhone: restaurant.contactPhone || restaurant.phone,
+            whatsappNumber: restaurant.branches?.[0]?.whatsappNumber || restaurant.contactPhone || restaurant.phone,
             config: restaurant.websiteConfig || {
                 backgroundColor: '#ffffff',
                 primaryColor: '#ff0000',
