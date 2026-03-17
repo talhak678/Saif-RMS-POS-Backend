@@ -5,13 +5,38 @@ import { startOfDay, endOfDay } from "date-fns";
 
 export async function POST(req: NextRequest) {
   try {
-    const { date, restaurantId } = await req.json();
+    const { date, restaurantId, instructions } = await req.json();
 
     if (!restaurantId) {
       return NextResponse.json({ error: "Restaurant ID is required" }, { status: 400 });
     }
 
-    const targetDate = date ? new Date(date) : new Date();
+    let targetDate = new Date();
+
+    // If instructions are provided, prioritize extraction from instructions
+    if (instructions) {
+      try {
+        const extractionPrompt = `Extract the specific date the user is asking about from this message: "${instructions}". 
+        Today's date is ${new Date().toDateString()}.
+        If the user mentions "yesterday", use yesterday's date.
+        If the user mentions a specific day of the week, use the most recent occurrence of that day.
+        Respond with ONLY the date in YYYY-MM-DD format. If no specific date is mentioned, respond with "${new Date().toISOString().split('T')[0]}".`;
+        
+        const extractedDateStr = await generateContent(extractionPrompt, "You are a precise date extraction tool.");
+        const parsedDate = new Date(extractedDateStr.trim());
+        if (!isNaN(parsedDate.getTime())) {
+          targetDate = parsedDate;
+        } else if (date) {
+            targetDate = new Date(date);
+        }
+      } catch (e) {
+        console.error("Failed to extract date from instructions:", e);
+        if (date) targetDate = new Date(date);
+      }
+    } else if (date) {
+      targetDate = new Date(date);
+    }
+
     const start = startOfDay(targetDate);
     const end = endOfDay(targetDate);
 
@@ -51,25 +76,29 @@ export async function POST(req: NextRequest) {
 
     const systemPrompt = `You are an expert restaurant business analyst. Your job is to convert raw sales data into a professional, clear, and actionable daily performance summary for the restaurant owner. 
     Focus on key metrics: revenue, order count, top performing items, and order sources. 
-    Use a professional tone. If data is missing, report the status as "No activity".`;
+    Always address any specific questions or instructions provided by the user.
+    Use a professional and encouraging tone. If data is missing, report the status as "No activity".`;
 
     const userPrompt = `Restaurant Performance Report for ${targetDate.toDateString()}
     
     KEY METRICS:
     - Total Orders: ${orderCount}
     - Total Revenue: $${totalRevenue.toFixed(2)}
-  
     
     SOURCE BREAKDOWN:
     - Website Orders: ${sourceBreakdown.WEBSITE || 0}
     - POS Orders: ${sourceBreakdown.POS || 0}
     - Mobile Orders: ${sourceBreakdown.MOBILE || 0}
+
+    TOP ITEMS: ${topItems || "None"}
+
+    USER'S SPECIFIC REQUEST/QUESTION: ${instructions || "Please provide a general overview of today's performance."}
     
-    Please provide a concise but professional performance summary. Include a brief note on which channel performed better today.`;
+    Please provide a concise but professional performance summary based on this data and the user's specific request.`;
 
     const summary = await generateContent(userPrompt, systemPrompt);
 
-    return NextResponse.json({ summary: summary.trim() });
+    return NextResponse.json({ summary: summary.trim(), date: targetDate.toISOString().split('T')[0] });
   } catch (error) {
     console.error("AI Summary Generation Error:", error);
     return NextResponse.json({ error: "Failed to generate sales summary" }, { status: 500 });
