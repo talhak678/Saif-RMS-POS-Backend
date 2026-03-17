@@ -1,40 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateContent } from "@/lib/gemini";
 import prisma from "@/lib/prisma";
-import { startOfDay, endOfDay } from "date-fns";
+import { startOfDay, endOfDay, format } from "date-fns";
 
 export async function POST(req: NextRequest) {
   try {
-    const { date, restaurantId, instructions } = await req.json();
+    const { restaurantId, instructions, clientDate } = await req.json();
 
     if (!restaurantId) {
       return NextResponse.json({ error: "Restaurant ID is required" }, { status: 400 });
     }
 
-    let targetDate = new Date();
+    // Use client date as today's reference if provided, otherwise server time
+    const today = clientDate ? new Date(clientDate) : new Date();
+    let targetDate = today;
 
     // If instructions are provided, prioritize extraction from instructions
     if (instructions) {
       try {
         const extractionPrompt = `Extract the specific date the user is asking about from this message: "${instructions}". 
-        Today's date is ${new Date().toDateString()}.
-        If the user mentions "yesterday", use yesterday's date.
-        If the user mentions a specific day of the week, use the most recent occurrence of that day.
-        Respond with ONLY the date in YYYY-MM-DD format. If no specific date is mentioned, respond with "${new Date().toISOString().split('T')[0]}".`;
+        Today's date is ${today.toDateString()} (YYYY-MM-DD: ${format(today, 'yyyy-MM-dd')}).
+        If the user mentions "yesterday", use ${format(new Date(today.getTime() - 86400000), 'yyyy-MM-dd')}.
+        If the user mentions "last week", use the start of last week.
+        If the user mentions a specific day of the week, use the most recent occurrence of that day relative to today.
+        Respond with ONLY the date in YYYY-MM-DD format. 
+        If no specific date is mentioned or it's ambiguous, respond with "${format(today, 'yyyy-MM-dd')}".`;
         
-        const extractedDateStr = await generateContent(extractionPrompt, "You are a precise date extraction tool.");
-        const parsedDate = new Date(extractedDateStr.trim());
-        if (!isNaN(parsedDate.getTime())) {
-          targetDate = parsedDate;
-        } else if (date) {
-            targetDate = new Date(date);
+        const extractedDateStr = await generateContent(extractionPrompt, "You are a precise date extraction tool for a restaurant POS system.");
+        const cleanDateStr = extractedDateStr.trim().match(/\d{4}-\d{2}-\d{2}/)?.[0];
+        
+        if (cleanDateStr) {
+          const parsedDate = new Date(cleanDateStr);
+          if (!isNaN(parsedDate.getTime())) {
+            targetDate = parsedDate;
+          }
         }
       } catch (e) {
         console.error("Failed to extract date from instructions:", e);
-        if (date) targetDate = new Date(date);
       }
-    } else if (date) {
-      targetDate = new Date(date);
     }
 
     const start = startOfDay(targetDate);
@@ -63,6 +66,12 @@ export async function POST(req: NextRequest) {
       return acc;
     }, {} as Record<string, number>);
 
+    // Breakdown by type (Dine-in, Delivery, etc)
+    const typeBreakdown = orders.reduce((acc, order) => {
+      acc[order.type] = (acc[order.type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
     const itemCounts: Record<string, number> = {};
     orders.forEach(order => {
       order.items.forEach(item => {
@@ -72,33 +81,39 @@ export async function POST(req: NextRequest) {
     });
 
     const sortedItems = Object.entries(itemCounts).sort((a, b) => b[1] - a[1]);
-    const topItems = sortedItems.slice(0, 10).map(i => `${i[0]} (${i[1]} units)`).join(", ");
+    const topItems = sortedItems.slice(0, 5).map(i => `**${i[0]}** (${i[1]} sold)`).join(", ");
 
-    const systemPrompt = `You are an expert restaurant business analyst. Your job is to convert raw sales data into a professional, clear, and actionable daily performance summary for the restaurant owner. 
-    Focus on key metrics: revenue, order count, top performing items, and order sources. 
-    Always address any specific questions or instructions provided by the user.
-    Use a professional and encouraging tone. If data is missing, report the status as "No activity".`;
-
-    const userPrompt = `Restaurant Performance Report for ${targetDate.toDateString()}
+    const systemPrompt = `You are "Saif AI", a premium restaurant business consultant and data analyst.
+    Your goal is to provide a "Best Report Summary" that is professional, insightful, and easy to read.
     
-    KEY METRICS:
+    Guidelines:
+    1. Use Markdown for formatting (titles, bold text, bullet points).
+    2. Start with a high-level executive summary of the day's performance.
+    3. Use sections like "💰 Revenue Highlights", "📦 Operational Overview", and "🔥 Popular Choices".
+    4. If the user asked a specific question, answer it first and prominent.
+    5. Provide actionable insights (e.g., if delivery is high, suggest optimizing delivery flow).
+    6. Tone should be sophisticated, encouraging, and data-driven.
+    7. If no orders are found, suggest ways to improve engagement for that date.`;
+
+    const userPrompt = `Generate a Comprehensive Performance Report for ${targetDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
+
+    RAW DATA SNAPSHOT:
     - Total Orders: ${orderCount}
-    - Total Revenue: $${totalRevenue.toFixed(2)}
-    
-    SOURCE BREAKDOWN:
-    - Website Orders: ${sourceBreakdown.WEBSITE || 0}
-    - POS Orders: ${sourceBreakdown.POS || 0}
-    - Mobile Orders: ${sourceBreakdown.MOBILE || 0}
+    - Total Revenue Gross: $${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+    - Source Mix: ${Object.entries(sourceBreakdown).map(([k, v]) => `${k}: ${v}`).join(', ') || "No data"}
+    - Type Mix: ${Object.entries(typeBreakdown).map(([k, v]) => `${k}: ${v}`).join(', ') || "No data"}
+    - Top 5 Best Sellers: ${topItems || "None recorded"}
 
-    TOP ITEMS: ${topItems || "None"}
+    USER'S MESSAGE/INQUIRY: "${instructions || "Please give me a complete summary of this day's performance."}"
 
-    USER'S SPECIFIC REQUEST/QUESTION: ${instructions || "Please provide a general overview of today's performance."}
-    
-    Please provide a concise but professional performance summary based on this data and the user's specific request.`;
+    Please provide the "Best Report Summary" based on this data.`;
 
     const summary = await generateContent(userPrompt, systemPrompt);
 
-    return NextResponse.json({ summary: summary.trim(), date: targetDate.toISOString().split('T')[0] });
+    return NextResponse.json({ 
+      summary: summary.trim(), 
+      date: targetDate.toISOString().split('T')[0] 
+    });
   } catch (error) {
     console.error("AI Summary Generation Error:", error);
     return NextResponse.json({ error: "Failed to generate sales summary" }, { status: 500 });
