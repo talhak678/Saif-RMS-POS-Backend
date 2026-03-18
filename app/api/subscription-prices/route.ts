@@ -4,17 +4,24 @@ import { NextRequest } from 'next/server'
 import { subscriptionPriceSchema } from '@/lib/validations/subscription-price'
 import { withAuth } from '@/lib/with-auth'
 
-export const GET = async (req: NextRequest) => {
+export const GET = withAuth(async (req: NextRequest, { auth }) => {
     try {
         const { searchParams } = new URL(req.url)
-        const restaurantId = searchParams.get('restaurantId')
+        const queryRestaurantId = searchParams.get('restaurantId')
         const isDefault = searchParams.get('isDefault') === 'true'
+
+        // If specific restaurantId is in query, use it. 
+        // Otherwise, if user is not SUPER_ADMIN, use their own restaurantId.
+        const targetRestaurantId = queryRestaurantId || (auth.role !== 'SUPER_ADMIN' ? auth.restaurantId : null);
 
         const prices = await (prisma as any).subscriptionPrice.findMany({
             where: {
-                ...(restaurantId ? { restaurantId } : {}),
+                isActive: true,
+                OR: [
+                    { restaurantId: null }, // Default prices
+                    ...(targetRestaurantId ? [{ restaurantId: targetRestaurantId }] : []) // Specifically for this restaurant
+                ],
                 ...(searchParams.has('isDefault') ? { isDefault } : {}),
-                isActive: true
             },
             include: {
                 restaurant: {
@@ -28,7 +35,7 @@ export const GET = async (req: NextRequest) => {
     } catch (error: any) {
         return errorResponse('Failed to fetch subscription prices', error.message, 500)
     }
-}
+})
 
 export const POST = withAuth(async (req: NextRequest, { auth }) => {
     try {
