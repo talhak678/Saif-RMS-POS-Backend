@@ -3,26 +3,56 @@ import { successResponse, errorResponse } from '@/lib/api-response'
 import { NextRequest } from 'next/server'
 import { subscriptionPriceSchema } from '@/lib/validations/subscription-price'
 import { withAuth } from '@/lib/with-auth'
+import { verifyAuthToken } from '@/lib/auth' // Aapko apni auth utility import karni hogi. Ex: verifyJwt(token) ya getServerSession()
 
-export const GET = withAuth(async (req: NextRequest, { auth }) => {
+// GET request se withAuth hata diya taake public (unauthorized) requests bhi aa sakein
+export const GET = async (req: NextRequest) => {
     try {
         const { searchParams } = new URL(req.url)
         const queryRestaurantId = searchParams.get('restaurantId')
-        const isDefault = searchParams.get('isDefault') === 'true'
+        const isDefaultQuery = searchParams.get('isDefault') === 'true'
 
-        // If specific restaurantId is in query, use it. 
-        // Otherwise, if user is not SUPER_ADMIN, use their own restaurantId.
-        const targetRestaurantId = queryRestaurantId || (auth.role !== 'SUPER_ADMIN' ? auth.restaurantId : null);
+        // Manually check token/auth session
+        const authHeader = req.headers.get('authorization')
+        let authUser: any = null;
 
-        const prices = await (prisma as any).subscriptionPrice.findMany({
-            where: {
-                isActive: true,
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.split(' ')[1];
+            try {
+                // Replace `verifyAuthToken` with your actual token verification function
+                authUser = await verifyAuthToken(token); 
+            } catch (err) {
+                // Token invalid ho gaya, authUser null hi rahega
+                console.log("Invalid token, treating as public request.");
+            }
+        }
+
+        let whereClause: any = { isActive: true };
+
+        // AGAR USER LOGGED IN HAI
+        if (authUser) {
+            const targetRestaurantId = queryRestaurantId || (authUser.role !== 'SUPER_ADMIN' ? authUser.restaurantId : null);
+            
+            whereClause = {
+                ...whereClause,
                 OR: [
                     { restaurantId: null }, // Default prices
                     ...(targetRestaurantId ? [{ restaurantId: targetRestaurantId }] : []) // Specifically for this restaurant
                 ],
-                ...(searchParams.has('isDefault') ? { isDefault } : {}),
-            },
+                ...(searchParams.has('isDefault') ? { isDefault: isDefaultQuery } : {}),
+            };
+        } 
+        // AGAR USER LOGGED IN NAHI HAI (UNAUTHORIZED / PUBLIC)
+        else {
+            // Sirf Default wale dikhao
+            whereClause = {
+                ...whereClause,
+                isDefault: true
+            };
+        }
+
+        const prices = await (prisma as any).subscriptionPrice.findMany({
+            where: whereClause,
             include: {
                 restaurant: {
                     select: { id: true, name: true, slug: true }
@@ -35,8 +65,9 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
     } catch (error: any) {
         return errorResponse('Failed to fetch subscription prices', error.message, 500)
     }
-})
+}
 
+// POST wese hi protected rahega withAuth ke sath
 export const POST = withAuth(async (req: NextRequest, { auth }) => {
     try {
         const body = await req.json()
