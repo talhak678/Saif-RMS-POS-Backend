@@ -5,7 +5,7 @@ import prisma from "./prisma";
 
 type Context = {
     params: Promise<any>; // Next.js 15+ params are promises
-    auth: AuthPayload
+    auth: AuthPayload | null
 };
 
 type AuthenticatedHandler = (
@@ -13,23 +13,23 @@ type AuthenticatedHandler = (
     context: Context
 ) => Promise<Response>;
 
-export function withAuth(handler: AuthenticatedHandler, options: { roles?: string[] } = {}) {
+export function withAuth(handler: AuthenticatedHandler, options: { roles?: string[], isOptional?: boolean } = {}) {
     return async (req: NextRequest, props: any) => {
         try {
             // Wait for params if they exist (Next.js 15+ standard)
             const params = props?.params ? await props.params : {};
             const auth = await getAuthContext(req);
 
-            if (!auth) {
+            if (!auth && !options.isOptional) {
                 return errorResponse("Authentication required", null, 401);
             }
 
-            if (options.roles && !options.roles.some(r => r.toLowerCase() === auth.role.toLowerCase())) {
+            if (auth && options.roles && !options.roles.some(r => r.toLowerCase() === auth.role.toLowerCase())) {
                 return errorResponse("Permission denied", null, 403);
             }
 
             // 🛑 Subscription Expiry Check
-            if (auth.role !== 'SUPER_ADMIN' && auth.restaurantId) {
+            if (auth && auth.role !== 'SUPER_ADMIN' && auth.restaurantId) {
                 const restaurant = await prisma.restaurant.findUnique({
                     where: { id: auth.restaurantId },
                     select: { subEndDate: true, name: true }
