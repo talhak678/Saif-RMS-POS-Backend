@@ -2,6 +2,7 @@ import prisma from '@/lib/prisma'
 import { successResponse, errorResponse } from '@/lib/api-response'
 import { NextRequest } from 'next/server'
 
+
 export const GET = async (req: NextRequest) => {
     try {
         const prices = await (prisma as any).subscriptionPrice.findMany({
