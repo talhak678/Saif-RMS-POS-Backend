@@ -10,23 +10,6 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
         const queryRestaurantId = searchParams.get('restaurantId')
         const isDefault = searchParams.get('isDefault') === 'true'
 
-        // If not authenticated, only show default prices
-        if (!auth) {
-            const prices = await (prisma as any).subscriptionPrice.findMany({
-                where: {
-                    isActive: true,
-                    isDefault: true,
-                },
-                include: {
-                    restaurant: {
-                        select: { id: true, name: true, slug: true }
-                    }
-                },
-                orderBy: { createdAt: 'desc' },
-            })
-            return successResponse(prices)
-        }
-
         // If specific restaurantId is in query, use it. 
         // Otherwise, if user is not SUPER_ADMIN, use their own restaurantId.
         const targetRestaurantId = queryRestaurantId || (auth.role !== 'SUPER_ADMIN' ? auth.restaurantId : null);
@@ -52,14 +35,10 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
     } catch (error: any) {
         return errorResponse('Failed to fetch subscription prices', error.message, 500)
     }
-}, { isOptional: true })
-
+})
 
 export const POST = withAuth(async (req: NextRequest, { auth }) => {
     try {
-        if (!auth) {
-            return errorResponse('Authentication required', null, 401)
-        }
         const body = await req.json()
         const validation = subscriptionPriceSchema.safeParse(body)
 
