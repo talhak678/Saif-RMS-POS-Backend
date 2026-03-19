@@ -177,7 +177,7 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
                         where: { event: 'NEW_ORDER_POS' }
                     });
 
-                    let message = `Naya Order pohnch gaya! #${fullOrder.orderNo} (${fullOrder.branch.restaurant.name})`;
+                    let message = `New Order Received! #${fullOrder.orderNo} (${fullOrder.branch.restaurant.name})`;
                     if (template) {
                         message = template.message
                             .replace("#{orderNo}", fullOrder.orderNo.toString())

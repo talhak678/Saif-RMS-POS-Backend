@@ -15,9 +15,9 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
         // If no templates exist, seed default ones automatically
         if (templates.length === 0) {
             const defaults = [
-                { event: 'NEW_ORDER_WEB', message: 'Website se Naya Order aya hai! ##{orderNo}' },
-                { event: 'NEW_ORDER_POS', message: 'Naya Order pohnch gaya! ##{orderNo} (#{restaurantName})' },
-                { event: 'SUB_REQUEST', message: 'Naya Subscription Request aya hai: #{restaurantName} (#{plan})' }
+                { event: 'NEW_ORDER_WEB', message: 'Website Order Received! ##{orderNo}' },
+                { event: 'NEW_ORDER_POS', message: 'New Order Received! ##{orderNo} (#{restaurantName})' },
+                { event: 'SUB_REQUEST', message: 'New Subscription Request: #{restaurantName} (#{plan})' }
             ];
 
             await prisma.notificationTemplate.createMany({
@@ -28,7 +28,24 @@ export const GET = withAuth(async (req: NextRequest, { auth }) => {
             return successResponse(seeded);
         }
 
-        return successResponse(templates)
+        // Logic to update old Urdu templates if found
+        const urduWeb = 'Website se Naya Order aya hai! ##{orderNo}';
+        const urduPos = 'Naya Order pohnch gaya! ##{orderNo} (#{restaurantName})';
+        const urduSub = 'Naya Subscription Request aya hai: #{restaurantName} (#{plan})';
+
+        for (const t of templates) {
+            if (t.message === urduWeb) {
+                await prisma.notificationTemplate.update({ where: { id: t.id }, data: { message: 'Website Order Received! ##{orderNo}' } });
+            } else if (t.message === urduPos) {
+                 await prisma.notificationTemplate.update({ where: { id: t.id }, data: { message: 'New Order Received! ##{orderNo} (#{restaurantName})' } });
+            } else if (t.message === urduSub) {
+                 await prisma.notificationTemplate.update({ where: { id: t.id }, data: { message: 'New Subscription Request: #{restaurantName} (#{plan})' } });
+            }
+        }
+
+        // Fetch again after potential updates
+        const finalTemplates = await prisma.notificationTemplate.findMany();
+        return successResponse(finalTemplates)
     } catch (error: any) {
         return errorResponse('Failed to fetch templates', error.message, 500)
     }

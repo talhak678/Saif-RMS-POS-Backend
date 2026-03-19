@@ -262,7 +262,7 @@ export async function POST(req: NextRequest) {
                         where: { event: 'NEW_ORDER_WEB' }
                     });
 
-                    let message = `Website se Naya Order aya hai! #${fullOrder.orderNo}`;
+                    let message = `Website Order Received! #${fullOrder.orderNo}`;
                     if (template) {
                         message = template.message.replace("#{orderNo}", fullOrder.orderNo.toString());
                     }
