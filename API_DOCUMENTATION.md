@@ -2540,10 +2540,26 @@ Get all subscription price entries.
 | `restaurantId` | string | ❌ Optional | Filter by restaurant ID. |
 | `isDefault` | boolean | ❌ Optional | `true` for system-wide default prices, `false` for restaurant-specific prices. |
 
+**Authentication:** Optional.
+- **If Authenticated:** Returns all prices (or filtered by restaurantId).
+- **If Unauthenticated:** Returns only `isDefault: true` subscription prices.
+
+**Success Response (200):** Typical list of price objects.
+
+---
+
+### GET `/api/subscription-prices/public`
+Get only system-wide default subscription prices.
+
+**Authentication:** Not Required (Public API).
+
+**Description:** Use this endpoint for landing pages or public pricing sections where no user session exists. It only returns entries where `isDefault: true` and `isActive: true`.
+
 **Success Response (200):**
 ```json
 {
   "success": true,
+  "message": "Public subscription prices fetched successfully",
   "data": [
     {
       "id": "clxxx...",
@@ -2559,6 +2575,7 @@ Get all subscription price entries.
   ]
 }
 ```
+
 
 ---
 
