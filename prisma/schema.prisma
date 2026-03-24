@@ -102,7 +102,10 @@ model Restaurant {
   country          String? @default("Pakistan")
   countryCode      String? @default("PK") @map("country_code")
   cuisines         String[] // e.g., ["Bakery", "Fast Food"]
-  serviceType      String?  @default("BOTH") @map("service_type") // DELIVERY, PICKUP, BOTH
+  isDeliveryEnabled Boolean @default(true) @map("is_delivery_enabled")
+  isPickupEnabled   Boolean @default(true) @map("is_pickup_enabled")
+  isDineInEnabled   Boolean @default(true) @map("is_dinein_enabled")
+  serviceType      String?  @default("BOTH") @map("service_type") // Legacy field, keeping for compatibility
   lat              Float?
   lng              Float?
 
