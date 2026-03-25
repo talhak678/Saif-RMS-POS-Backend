@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server'
 import { OrderStatus, PaymentMethod, PaymentStatus } from '@prisma/client'
 import { orderCreateSchema } from '@/lib/validations/order'
 import { withAuth } from '@/lib/with-auth'
+import { deductStockForOrder } from '@/lib/inventory-service'
 
 export const GET = withAuth(async (req: NextRequest, { auth }) => {
     try {
@@ -150,6 +151,16 @@ export const POST = withAuth(async (req: NextRequest, { auth }) => {
 
             return order
         })
+
+        // Real-time Stock Deduction for POS orders 
+        // POS orders are usually fulfilled immediately, so we deduct stock right away.
+        if (source === 'POS') {
+            try {
+                await deductStockForOrder(result.id);
+            } catch (err) {
+                console.error('[OrdersAPI] POS Stock deduction failed:', err);
+            }
+        }
 
         const fullOrder = await prisma.order.findUnique({
             where: { id: result.id },

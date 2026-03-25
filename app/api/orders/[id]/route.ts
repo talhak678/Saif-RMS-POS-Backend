@@ -3,6 +3,7 @@ import { successResponse, errorResponse } from '@/lib/api-response'
 import { NextRequest } from 'next/server'
 import { orderUpdateSchema } from '@/lib/validations/order'
 import { withAuth } from '@/lib/with-auth'
+import { deductStockForOrder } from '@/lib/inventory-service'
 
 export const GET = withAuth(async (req, { params, auth }) => {
     try {
@@ -76,7 +77,20 @@ export const PUT = withAuth(async (req, { params, auth }) => {
                 }
             }
         })
-
+        
+        // Dynamic Stock Deduction Logic 
+        // We deduct stock when an order is moved from PENDING to an active status 
+        // This ensures the inventory reflects the ingredients being "used" in real-time.
+        const activeStatuses = ['CONFIRMED', 'KITCHEN_READY', 'PREPARING', 'OUT_FOR_DELIVERY', 'DELIVERED'];
+        if (existing.status === 'PENDING' && status && activeStatuses.includes(status)) {
+            try {
+                await deductStockForOrder(order.id);
+            } catch (err) {
+                console.error('[OrdersAPI] Error deducting stock:', err);
+                // Non-blocking error - we don't want to stop the order flow if inventory fails 
+            }
+        }
+        
         // 💰 Loyalty Points Logic
         if (status === 'DELIVERED' && order.customerId) {
             try {
